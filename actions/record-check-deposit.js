@@ -72,8 +72,8 @@ function main(params) {
               return callback(null, processed);
             }
           });
-        },
-
+        }
+/* 
         // Send email notification, simulating connectivity to backend system and notifying customer.
         function(processed, callback) {
           console.log('[record-check-deposit.main] Sending notification email');
@@ -107,7 +107,7 @@ function main(params) {
             }
           });
 
-        }
+        } */
 
       ],
 
