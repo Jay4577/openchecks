@@ -45,8 +45,7 @@ function install() {
   # The trigger will only fire for 30 minutes instead of 10k times.
   $WSK trigger create poll-for-incoming-checks \
     --feed /whisk.system/alarms/alarm \
-    --param cron '*/20 * * * * *' \
-    --param maxTriggers 90
+    --param cron '*/20 * * * * *'
   $WSK trigger create check-ready-to-scan \
     --feed "/$CURRENT_NAMESPACE/$CLOUDANT_INSTANCE/changes" \
     --param dbname "$CLOUDANT_AUDITED_DATABASE"
