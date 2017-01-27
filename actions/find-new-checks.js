@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+var openwhisk = require('openwhisk');
 var request = require('request');
 var async = require('async');
 var fs = require('fs');
+var path = require('path');
 
 /**
  * This action is triggered by a new check image added to object storage, or in this case a CouchDB database.
@@ -53,13 +54,19 @@ function main(params) {
         console.log("Found", files.length, "files");
         var tasks = files.map(function(file) {
           return function(callback) {
-            asyncCallSaveCheckImagesAction(
-              "/" + params.CURRENT_NAMESPACE + "/save-check-images",
-              file.name,
-              file.content_type,
-              file.last_modified,
-              callback
-            );
+			var filePathPieces = file.name.split(path.sep);
+			if (filePathPieces.length != 2) {
+				return callback(null);
+			} else {
+				asyncCallSaveCheckImagesAction(
+				  "/" + params.CURRENT_NAMESPACE + "/save-check-images",
+				  filePathPieces[0],
+				  filePathPieces[1],
+				  file.content_type,
+				  file.last_modified,
+				  callback
+				);
+			}
           };
         });
         async.waterfall(tasks, function(err, result) {
@@ -76,17 +83,19 @@ function main(params) {
  * This function provides a way to invoke other OpenWhisk actions directly and asynchronously
  *
  * @param   actionName    The id of the record in the Cloudant 'processed' database
+ * @param   branchFolder  Cloudant path to store image of this branch (only 1 folder depth allowed)
  * @param   fileName      Cloudant username (set once at action update time)
  * @param   contentType   Cloudant password (set once at action update time)
  * @param   lastModified  Cloudant password (set once at action update time)
  * @param   callback      Cloudant password (set once at action update time)
  * @return                The reference to a configured object storage instance
  */
-function asyncCallSaveCheckImagesAction(actionName, fileName, contentType, lastModified, callback) {
+function asyncCallSaveCheckImagesAction(actionName, branchFolder, fileName, contentType, lastModified, callback) {
   console.log("Calling", actionName, "for", fileName);
   whisk.invoke({
     name: actionName,
     parameters: {
+	  branchFolder: branchFolder,
       fileName: fileName,
       contentType: contentType,
       lastModified: lastModified

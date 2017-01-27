@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+var openwhisk = require('openwhisk');
 var request = require('request');
 var async = require('async');
 var fs = require('fs');
@@ -46,9 +46,6 @@ var Cloudant = require('cloudant');
 function main(params) {
   console.log("Processing one file", params);
 
-  var imageRootFolder = "checks-images";
-  var imageFolder = imageRootFolder + "/" + params.SWIFT_INCOMING_CONTAINER_NAME;
-
   // Configure database connection
   var cloudant = new Cloudant({
     account: params.CLOUDANT_USER,
@@ -68,8 +65,13 @@ function main(params) {
   // Names to use for the 50% and 25% scaled images
   //var medFileName = "300px-" + params.fileName;
   //var smFileName = "150px-" + params.fileName;
+  var imageRootFolder = "checks-images";
+  var imageContainerFolder = imageRootFolder + "/" + params.SWIFT_INCOMING_CONTAINER_NAME;
+  var imageBranchFolder = imageContainerFolder + "/" + params.branchFolder;
   if (!fs.existsSync(imageRootFolder)) fs.mkdirSync(imageRootFolder, 600);
-  if (!fs.existsSync(imageFolder)) fs.mkdirSync(imageFolder, 600);
+  if (!fs.existsSync(imageContainerFolder)) fs.mkdirSync(imageContainerFolder, 600);
+  if (!fs.existsSync(imageBranchFolder)) fs.mkdirSync(imageBranchFolder, 600);
+  var imageFolder = imageBranchFolder;
   
   var rootDirectory;
 
@@ -88,7 +90,7 @@ function main(params) {
       // Get the file on disk as a temp file
       function(callback) {
         console.log("Downloading", params.fileName);
-        os.downloadFile(params.SWIFT_INCOMING_CONTAINER_NAME, params.fileName, fs.createWriteStream(rootDirectory + "/" + params.fileName), function(err) {
+        os.downloadFile(params.SWIFT_INCOMING_CONTAINER_NAME, params.branchFolder + "/" + params.fileName, fs.createWriteStream(rootDirectory + "/" + params.fileName), function(err) {
           return callback(err);
         });
       },
@@ -249,7 +251,7 @@ function main(params) {
       // When all the steps above have completed successfully, delete the file from the incoming folder
       function(callback) {
         console.log("Deleting processed file from", params.SWIFT_INCOMING_CONTAINER_NAME);
-        os.deleteFile(params.SWIFT_INCOMING_CONTAINER_NAME, params.fileName, callback, function(err) {
+        os.deleteFile(params.SWIFT_INCOMING_CONTAINER_NAME, params.branchFolder + "/" + params.fileName, callback, function(err) {
           if (err) {
             return callback(err);
           } else {

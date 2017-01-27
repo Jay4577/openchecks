@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+var openwhisk = require('openwhisk');
 var Cloudant = require('cloudant');
 var request = require('request');
 var async = require('async');

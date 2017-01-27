@@ -22,9 +22,8 @@ declare -a values=($(grep -Eo "\[[[0-9]+" imgData.txt.txt | sed -e 's/\[//g'))
 # Extract the two values.
 ROUTING=${values[0]}
 ACCOUNT=${values[1]}
+PLAINTEXT=`cat imgData.txt.txt | base64`
+PLAINTEXT=`echo "$PLAINTEXT" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/ /g'`
 
 # Return JSON formatted values.
-echo "{ \"result\": {\"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\"} }"
-
-
-https://b1a9198c-0a96-40e6-8f1a-de6dc25e88c7-bluemix.cloudant.com/audited/68ed6370-e3e6-11e6-a4ab-89e30fe1a8f2/sratez@irium.es^12345679^1500.00^0000000111.jpg?attachments=true&include_docs=true
+echo "{ \"result\": {\"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\", \"plaintext\": \"$PLAINTEXT\", \"attachmentname\": \"$ATTACHMENT_NAME\" } }"
