@@ -38,38 +38,38 @@ function main(params) {
 
   // Configure object storage connection
   var os = new ObjectStorage(
-    params.SWIFT_REGION_NAME,
-    params.SWIFT_PROJECT_ID,
-    params.SWIFT_USER_ID,
-    params.SWIFT_PASSWORD
-  );
+          params.SWIFT_REGION_NAME,
+          params.SWIFT_PROJECT_ID,
+          params.SWIFT_USER_ID,
+          params.SWIFT_PASSWORD
+          );
 
-  os.authenticate(function(err, response, body) {
+  os.authenticate(function (err, response, body) {
     if (err) {
       console.log("Authentication failure", err);
       whisk.done(null, err);
     } else {
-      os.listFiles(params.SWIFT_INCOMING_CONTAINER_NAME, function(err, response, files) {
+      os.listFiles(params.SWIFT_INCOMING_CONTAINER_NAME, function (err, response, files) {
         console.log(files);
         console.log("Found", files.length, "files");
-        var tasks = files.map(function(file) {
-          return function(callback) {
-			var filePathPieces = file.name.split(path.sep);
-			if (filePathPieces.length != 2) {
-				return callback(null);
-			} else {
-				asyncCallSaveCheckImagesAction(
-				  "/" + params.CURRENT_NAMESPACE + "/save-check-images",
-				  filePathPieces[0],
-				  filePathPieces[1],
-				  file.content_type,
-				  file.last_modified,
-				  callback
-				);
-			}
+        var tasks = files.map(function (file) {
+          return function (callback) {
+            var filePathPieces = file.name.split(path.sep);
+            if (filePathPieces.length !== 2) {
+              return callback(null);
+            } else {
+              asyncCallSaveCheckImagesAction(
+                      "/" + params.CURRENT_NAMESPACE + "/save-check-images",
+                      filePathPieces[0],
+                      filePathPieces[1],
+                      file.content_type,
+                      file.last_modified,
+                      callback
+                      );
+            }
           };
         });
-        async.waterfall(tasks, function(err, result) {
+        async.waterfall(tasks, function (err, result) {
           whisk.done(undefined, err);
         });
       });
@@ -95,13 +95,13 @@ function asyncCallSaveCheckImagesAction(actionName, branchFolder, fileName, cont
   whisk.invoke({
     name: actionName,
     parameters: {
-	  branchFolder: branchFolder,
+      branchFolder: branchFolder,
       fileName: fileName,
       contentType: contentType,
       lastModified: lastModified
     },
     blocking: false,
-    next: function(error, activation) {
+    next: function (error, activation) {
       if (error) {
         console.log(actionName, "[error]", error);
       } else {
@@ -132,7 +132,7 @@ function ObjectStorage(region, projectId, userId, password) {
     throw new Error("Invalid Region");
   }
 
-  self.authenticate = function(callback) {
+  self.authenticate = function (callback) {
     request({
       uri: "https://identity.open.softlayer.com/v3/auth/tokens",
       method: 'POST',
@@ -156,7 +156,7 @@ function ObjectStorage(region, projectId, userId, password) {
           }
         }
       }
-    }, function(err, response, body) {
+    }, function (err, response, body) {
       if (!err) {
         self.token = response.headers["x-subject-token"];
       }
@@ -164,7 +164,7 @@ function ObjectStorage(region, projectId, userId, password) {
     });
   };
 
-  self.listFiles = function(container, callback) {
+  self.listFiles = function (container, callback) {
     request({
       uri: self.baseUrl + container,
       method: 'GET',

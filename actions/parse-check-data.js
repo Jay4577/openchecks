@@ -48,7 +48,6 @@ function main(params) {
   var rejectedDb = cloudant.db.use(params.CLOUDANT_REJECTED_DATABASE);
 
   // Data to extract from check and send along to the transaction system to process.
-  var fileName;
   var email;
   var toAccount;
   var fromAccount;
@@ -62,94 +61,92 @@ function main(params) {
 
     async.waterfall([
 
-        // OCR magic. Takes image, reads it, returns fromAccount, routingNumber
-        function(callback) {
-          console.log('[parse-check-data.main] Executing OCR parse of check');
-          asyncCallOcrParseAction("/" + params.CURRENT_NAMESPACE + "/parse-check-with-ocr",
-            params.CLOUDANT_USER,
-            params.CLOUDANT_PASS,
-            params.CLOUDANT_AUDITED_DATABASE,
-            params._id,
-			params.attachmentName,
-            callback
+      // OCR magic. Takes image, reads it, returns fromAccount, routingNumber
+      function (callback) {
+        console.log('[parse-check-data.main] Executing OCR parse of check');
+        asyncCallOcrParseAction("/" + params.CURRENT_NAMESPACE + "/parse-check-with-ocr",
+                params.CLOUDANT_USER,
+                params.CLOUDANT_PASS,
+                params.CLOUDANT_AUDITED_DATABASE,
+                params._id,
+                params.attachmentName,
+                callback
+                );
+      },
+
+      // Insert data into the parsed database.
+      function (activation, callback) {
+        plainMicrCheckText = Buffer.from(activation.result.result.plaintext, 'base64').toString("ascii");
+        console.log('Plain text: ' + plainMicrCheckText);
+
+        var values = params.fileName.split('^');
+        email = values[0];
+        toAccount = values[1];
+        amount = values[2];
+        //timestamp = values[3].substring(0, values[3].length - 4); // Remove file extension
+        timestamp = parseInt((new Date).getTime() / 1000, 10);
+
+        var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
+        if (bankingInfo.invalid()) {
+          console.log('Inserting in REJECTEDDB, id ' + params._id + ", amount = " + amount);
+          rejectedDb.insert({
+            _id: params._id,
+            toAccount: toAccount,
+            email: email,
+            amount: amount,
+            timestamp: timestamp
+          },
+                  function (err, body, head) {
+                    if (err) {
+                      console.log('[parse-check-data.main] error: parsedDb');
+                      console.log(err);
+                      return callback(err);
+                    } else {
+                      console.log('[parse-check-data.main] success: parsedDb');
+                      console.log(body);
+                      return callback(null);
+                    }
+                  }
           );
-        },
-
-        // Insert data into the parsed database.
-        function(activation, callback) {
-          plainMicrCheckText = Buffer.from(activation.result.result.plaintext, 'base64').toString("ascii");
-          console.log('Plain text: ' + plainMicrCheckText);
-		  
-          var values = params.fileName.split('^');
-          email = values[0];
-          toAccount = values[1];
-          amount = values[2];
-          //timestamp = values[3].substring(0, values[3].length - 4); // Remove file extension
-		  timestamp = parseInt((new Date).getTime() / 1000,10);
-		  
-		  var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);		  
-		  if (bankingInfo.invalid()) {
-			console.log('Inserting in REJECTEDDB, id ' + params._id + ", amount = " + amount);
-			rejectedDb.insert({
-				  _id: params._id,
-				  toAccount: toAccount,
-				  email: email,
-				  amount: amount,
-				  timestamp: timestamp
-				},
-				function(err, body, head) {
-				  if (err) {
-					console.log('[parse-check-data.main] error: parsedDb');
-					console.log(err);
-					return callback(err);
-				  } else {
-					console.log('[parse-check-data.main] success: parsedDb');
-					console.log(body);
-					return callback(null);
-				  }
-				}
-			);
-		  } else {
-			fromAccount = bankingInfo.accountNumber;
-			routingNumber = bankingInfo.routingNumber;
-			//fromAccount = activation.result.result.account;
-			//routingNumber = activation.result.result.routing;
-
-			console.log('Inserting in PARSEDDB, id ' + params._id + ", amount = " + amount);
-			parsedDb.insert({
-				  _id: params._id,
-				  toAccount: toAccount,
-				  fromAccount: fromAccount,
-				  routingNumber: routingNumber,
-				  email: email,
-				  amount: amount,
-				  timestamp: timestamp
-				},
-				function(err, body, head) {
-				  if (err) {
-					console.log('[parse-check-data.main] error: parsedDb');
-					console.log(err);
-					return callback(err);
-				  } else {
-					console.log('[parse-check-data.main] success: parsedDb');
-					console.log(body);
-					return callback(null);
-				  }
-				}
-			);
-		  }
-        },
-
-      ],
-
-      function(err, result) {
-        if (err) {
-          console.log("[KO]", err);
         } else {
-          console.log("[OK]");
+          fromAccount = bankingInfo.accountNumber;
+          routingNumber = bankingInfo.routingNumber;
+          //fromAccount = activation.result.result.account;
+          //routingNumber = activation.result.result.routing;
+
+          console.log('Inserting in PARSEDDB, id ' + params._id + ", amount = " + amount);
+          parsedDb.insert({
+            _id: params._id,
+            toAccount: toAccount,
+            fromAccount: fromAccount,
+            routingNumber: routingNumber,
+            email: email,
+            amount: amount,
+            timestamp: timestamp
+          },
+                  function (err, body, head) {
+                    if (err) {
+                      console.log('[parse-check-data.main] error: parsedDb');
+                      console.log(err);
+                      return callback(err);
+                    } else {
+                      console.log('[parse-check-data.main] success: parsedDb');
+                      console.log(body);
+                      return callback(null);
+                    }
+                  }
+          );
         }
-        whisk.done(null, err);
-      }
+      },
+    ],
+            function (err, result) {
+              if (err) {
+                console.log("[KO]", err);
+              } else {
+                console.log("[OK]");
+              }
+              whisk.done(null, err);
+            }
     );
 
   }
@@ -176,10 +173,10 @@ function asyncCallOcrParseAction(actionName, cloudantUser, cloudantPass, databas
       CLOUDANT_PASS: cloudantPass,
       CLOUDANT_AUDITED_DATABASE: database,
       IMAGE_ID: id,
-	  ATTACHMENT_NAME: attachmentName
+      ATTACHMENT_NAME: attachmentName
     },
     blocking: true,
-    next: function(err, activation) {
+    next: function (err, activation) {
       if (err) {
         console.log(actionName, "[error]", error);
         return callback(err);
@@ -197,11 +194,11 @@ function asyncCallOcrParseAction(actionName, cloudantUser, cloudantPass, databas
  * @class
  */
 function BankCheckMicrInformation(routingNumber, accountNumber) {
-	this.routingNumber = routingNumber;
-	this.accountNumber = accountNumber;
-	this.invalid = function() {
-		return this.routingNumber.length != 9 || this.accountNumber.length === 2;
-	}
+  this.routingNumber = routingNumber;
+  this.accountNumber = accountNumber;
+  this.invalid = function () {
+    return this.routingNumber.length != 9 || this.accountNumber.length === 2;
+  }
 }
 
 /**
@@ -209,23 +206,29 @@ function BankCheckMicrInformation(routingNumber, accountNumber) {
  * @return {BankCheckMicrInformation}
  */
 function parseMicrDataToBankingInformation(micrCheckRawInformation) {
-	if (typeof micrCheckRawInformation !== "string") throw new Error("Invalid Micr information");
-	if (micrCheckRawInformation.length === 0) throw new Error("Invalid Micr information");
-	
-	var routingRegExp = /\[\d{9}\[/gm;
-	var routingMatches = micrCheckRawInformation.match(routingRegExp);
-	if (routingMatches === null || routingMatches.length === 0) return new BankCheckMicrInformation("-1", "0");
-	if (routingMatches.length > 1) return new BankCheckMicrInformation("-2", "0");
-	var routingNumber = routingMatches[0].substring(1,10);
-	
-	var accountRegExp = /(\[\d{9}\[)( ?)([0-9A-Z]+@)/igm;
-	var accountMatches = accountRegExp.exec(micrCheckRawInformation);
-	
-	console.log("Matches for account number: ");
-	console.log(accountMatches);
-	if (accountMatches === null || accountMatches.length === 0) return new BankCheckMicrInformation(routingNumber, "-1");
-	if (accountMatches.length > 4) return new BankCheckMicrInformation(routingNumber, "-2");
-	var accountNumber = accountMatches[3].replace("@", "");
-	
-	return new BankCheckMicrInformation(routingNumber, accountNumber);
+  if (typeof micrCheckRawInformation !== "string")
+    throw new Error("Invalid Micr information");
+  if (micrCheckRawInformation.length === 0)
+    throw new Error("Invalid Micr information");
+
+  var routingRegExp = /\[\d{9}\[/gm;
+  var routingMatches = micrCheckRawInformation.match(routingRegExp);
+  if (routingMatches === null || routingMatches.length === 0)
+    return new BankCheckMicrInformation("-1", "0");
+  if (routingMatches.length > 1)
+    return new BankCheckMicrInformation("-2", "0");
+  var routingNumber = routingMatches[0].substring(1, 10);
+
+  var accountRegExp = /(\[\d{9}\[)( ?)([0-9A-Z]+@)/igm;
+  var accountMatches = accountRegExp.exec(micrCheckRawInformation);
+
+  console.log("Matches for account number: ");
+  console.log(accountMatches);
+  if (accountMatches === null || accountMatches.length === 0)
+    return new BankCheckMicrInformation(routingNumber, "-1");
+  if (accountMatches.length > 4)
+    return new BankCheckMicrInformation(routingNumber, "-2");
+  var accountNumber = accountMatches[3].replace("@", "");
+
+  return new BankCheckMicrInformation(routingNumber, accountNumber);
 }
