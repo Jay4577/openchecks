@@ -1,0 +1,60 @@
+Enter Ctrl-c to exit.
+Polling for activation logs
+
+Activation: find-new-checks (03b1e2ca36174baaa198e775315affb6)
+[
+    "2017-01-31T11:42:00.29394211Z  stdout: Retrieving file list",
+    "2017-01-31T11:42:00.294679184Z stderr: [WARN] \"whisk.async\" is deprecated. Actions should return Promises.",
+    "2017-01-31T11:42:00.793477511Z stdout: [ { hash: 'd41d8cd98f00b204e9800998ecf8427e',",
+    "2017-01-31T11:42:00.793517059Z stdout: last_modified: '2017-01-27T11:44:55.242970',",
+    "2017-01-31T11:42:00.793529058Z stdout: bytes: 0,",
+    "2017-01-31T11:42:00.793540016Z stdout: name: 'branch1',",
+    "2017-01-31T11:42:00.793549553Z stdout: content_type: 'application/directory' } ]",
+    "2017-01-31T11:42:00.793545292Z stderr: [WARN] \"whisk.done\" is deprecated. Actions should return Promises.",
+    "2017-01-31T11:42:00.793565141Z stdout: Found 1 files"
+]
+
+Activation: poll-for-incoming-checks (19fe9fcf26564f40b3281d20379cadfd)
+[]
+
+Activation: fetch-checks (1d9c0f0708834fbabc8ce1a014fff8cf)
+[]
+
+Activation: find-new-checks (952f35c2f5b04e30822815f6b57b383c)
+[
+    "2017-01-31T11:42:20.29091495Z  stdout: Retrieving file list",
+    "2017-01-31T11:42:20.291513506Z stderr: [WARN] \"whisk.async\" is deprecated. Actions should return Promises.",
+    "2017-01-31T11:42:20.72452215Z  stdout: [ { hash: 'd41d8cd98f00b204e9800998ecf8427e',",
+    "2017-01-31T11:42:20.724550249Z stdout: last_modified: '2017-01-27T11:44:55.242970',",
+    "2017-01-31T11:42:20.724561589Z stdout: bytes: 0,",
+    "2017-01-31T11:42:20.724571249Z stdout: name: 'branch1',",
+    "2017-01-31T11:42:20.724580638Z stdout: content_type: 'application/directory' } ]",
+    "2017-01-31T11:42:20.724599876Z stdout: Found 1 files",
+    "2017-01-31T11:42:20.724603721Z stderr: [WARN] \"whisk.done\" is deprecated. Actions should return Promises."
+]
+
+Activation: poll-for-incoming-checks (c6d1dd274db0443c88deba862633d213)
+[]
+
+Activation: fetch-checks (fca1f0b0264e4912aaac2debfcde411b)
+[]
+
+Activation: poll-for-incoming-checks (76affc1040b141fabbb3a96917b7858e)
+[]
+
+Activation: fetch-checks (8737f090ba8d441486eb07faee07cce9)
+[]
+
+Activation: find-new-checks (9f279b05a2224bfdb6300e56bdb13b2c)
+[
+    "2017-01-31T11:42:40.351710975Z stdout: Retrieving file list",
+    "2017-01-31T11:42:40.360727179Z stderr: [WARN] \"whisk.async\" is deprecated. Actions should return Promises.",
+    "2017-01-31T11:42:40.916841475Z stdout: [ { hash: 'd41d8cd98f00b204e9800998ecf8427e',",
+    "2017-01-31T11:42:40.916883552Z stdout: last_modified: '2017-01-27T11:44:55.242970',",
+    "2017-01-31T11:42:40.91689505Z  stdout: bytes: 0,",
+    "2017-01-31T11:42:40.91690459Z  stdout: name: 'branch1',",
+    "2017-01-31T11:42:40.916913778Z stdout: content_type: 'application/directory' } ]",
+    "2017-01-31T11:42:40.916932829Z stdout: Found 1 files",
+    "2017-01-31T11:42:40.918089948Z stderr: [WARN] \"whisk.done\" is deprecated. Actions should return Promises."
+]
+Poll terminated
