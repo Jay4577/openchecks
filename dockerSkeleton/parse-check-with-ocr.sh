@@ -27,3 +27,6 @@ PLAINTEXT=`echo "$PLAINTEXT" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/ /g'`
 
 # Return JSON formatted values.
 echo "{ \"result\": {\"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\", \"plaintext\": \"$PLAINTEXT\", \"attachmentname\": \"$ATTACHMENT_NAME\" } }"
+
+
+

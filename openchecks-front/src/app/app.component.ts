@@ -15,13 +15,4 @@ export class AppComponent {
     
   }
   
-  getRejectedChecks() {
-    let o = this.dashboardService.getRejectedChecks();
-    o.subscribe(rows => { 
-        this.rejectedChecks = rows; 
-      }, err => { 
-        console.log(err); 
-    });
-  }
-  
 }

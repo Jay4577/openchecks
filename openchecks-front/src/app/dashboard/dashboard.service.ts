@@ -1,7 +1,7 @@
 import {Injectable} from '@angular/core';
 import {Http, Response, Headers} from '@angular/http';
 import {Databases} from '../shared/Databases';
-import {CloudantRejectedRowMapping} from '../shared/dao/CloudantRejectedRowMapping'
+import {CloudantRejectedRowMapping} from '../shared/dao/CloudantRejectedRowMapping';
 
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/catch';
@@ -33,9 +33,21 @@ export class DashboardService {
   }
   
   getParsedChecks() {
+    let url = this.buildRootDatabaseUrl(Databases.PARSED) + "_all_docs";
+    let headers = new Headers();
+    headers.append("Authorization", this.buildCloudantAuthHttpCredentials()); 
+    headers.append("Content-Type", "application/x-www-form-urlencoded");
+    
+    return this.http.get(url, { headers: headers }).map(this.extractData).catch(this.handleError);
   }
   
   getAudited() {
+    let url = this.buildRootDatabaseUrl(Databases.AUDITED) + "_all_docs";
+    let headers = new Headers();
+    headers.append("Authorization", this.buildCloudantAuthHttpCredentials()); 
+    headers.append("Content-Type", "application/x-www-form-urlencoded");
+    
+    return this.http.get(url, { headers: headers }).map(this.extractData).catch(this.handleError);
   }
 
   private handleError(error: Response | any) {
