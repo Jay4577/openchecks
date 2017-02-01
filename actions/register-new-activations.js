@@ -17,9 +17,12 @@ var openwhisk = require('openwhisk');
 var Cloudant = require('cloudant');
 var async = require('async');
 var request = require('request');
+var activationPendingRegistering = 0;
+var stillRegisteringActivations = false;
+var activationRegistryError = null;
 
 /**
- * This action is triggered by a new check image added to a CouchDB database.
+ * register-new-activations - This action is triggered by a new check image added to a CouchDB database.
  * This action is idempotent. If it fails, it can be retried.
  *
  * 1. Fetch the record from the 'audited' database and find its attachment along with
@@ -27,11 +30,9 @@ var request = require('request');
  * 2. Process the image for deposit to account, routing number and move it to
  *    another 'parsed' database with metadata and a confidence score.
  *
- * @param   params._id                        The id of the inserted record in the Cloudant 'audit' database that triggered this action
  * @param   params.CLOUDANT_USER              Cloudant username
  * @param   params.CLOUDANT_PASS              Cloudant password
  * @param   params.CLOUDANT_ACTIVATION_DATABASE  Cloudant database to store the original copy to
- * @param   params.CURRENT_NAMESPACE          The current namespace so we can call the OCR action by name
  * @return                                    Standard OpenWhisk success/error response
  */
 function main(params) {
@@ -44,16 +45,18 @@ function main(params) {
   });
   var activationsDb = cloudant.db.use(params.CLOUDANT_ACTIVATION_DATABASE);
 
-  var actionName;
+  var actionName, activationId;
   var timeMs;
-  var uuid1;
-
+  //var watchedActions = ["alarm", "parse-check-with-ocr", "find-new-checks", "parse-check-data", "read", "record-check-deposit", "save-check-images"];
+  var watchedActions = ["parse-check-data"];
+  var owApiActivationsUrl = 'https://8023f207-bcf8-433a-843d-e7eb144757b3:qbYrKqW0TxSr9n980cHi0nRT6EgcFv6nalvENWAeVYrH5cEuYV62X6KFiwaW3TWx@openwhisk.ng.bluemix.net/api/v1/namespaces/_/activations';
+  
     async.waterfall([
       // Insert data into the parsed database.
       function (callback) {
         
         request({
-            url: 'https://8023f207-bcf8-433a-843d-e7eb144757b3:qbYrKqW0TxSr9n980cHi0nRT6EgcFv6nalvENWAeVYrH5cEuYV62X6KFiwaW3TWx@openwhisk.ng.bluemix.net/api/v1/namespaces/_/activations',
+            url: owApiActivationsUrl + "?limit=300",
             method: 'GET',
             headers: {
               'Content-Type': 'application/json'
@@ -64,35 +67,56 @@ function main(params) {
               console.log(err);
               return callback(err);
             } else {
-              console.log('[record-check-deposit.main] success: ');
-              console.log(body);
-              return callback(null);
+              return callback(null,JSON.parse(body));
             }
           });
       }, function(activations, callback) {
           if (!activations) return callback(new Error("no activations object"));
-          console.log();
           if (typeof activations.length === "undefined") return callback(new Error("weird activation object"));
+          if (activations.length === 0) return callback(null);
           
-        
-          uuid1 = uuid.v1();
-          activationsDb.insert({
-              _id: uuid1,
-              actionName: actionName,
-              timeMs: timeMs
-            },
-            function (err, body, head) {
-              if (err) {
-                console.log('[parse-check-data.main] error: parsedDb');
-                console.log(err);
-                return callback(err);
+          console.log("Found " + activations.length + " activations.");
+          
+          var queueMilliseconds = 0;
+          for(var i = 0; i<activations.length; i++) {
+              stillRegisteringActivations = true;
+              var activation = activations[i];
+              actionName = activation.name;
+              activationId = activation.activationId;
+              
+              if (watchedActions.indexOf(actionName) >= 0) {
+                //delaying the insert as cloudant lite is limited to 10 per sec.
+                activationPendingRegistering++;
+                setTimeout(function(activationId, actionName) { return function() {
+                    console.log("Now getting detailled information for activationid " + activationId + " for action name " + actionName);
+                    request({
+                      url: owApiActivationsUrl + "/" + activationId,
+                      method: 'GET',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      }
+                    }, function(err, response, body) {
+                      if (err) {
+                        console.log('[register-new-activations.individualget] error: ');
+                        console.log(err);
+                        activationRegistryError = err;
+                        stillRegisteringActivations = false;
+                        activationPendingRegistering = 0;
+                      } else {
+                        timeMs = JSON.parse(body).duration;
+                        console.log("About to register action " + actionName + " that took " + timeMs + "ms to complete...");
+                        registerActivation(activationsDb,activationId, actionName, timeMs, callback);
+                      }
+                    });
+                }}(activationId, actionName), queueMilliseconds);
+                queueMilliseconds = queueMilliseconds+120;
               } else {
-                console.log('[parse-check-data.main] success: parsedDb');
-                console.log(body);
-                return callback(null);
+                  console.log("Action " + actionName + " is out of scope, skipping...");
+                  //console.log(activation);
               }
-            }
-          );
+          }
+          stillRegisteringActivations = false;
+          if (activationPendingRegistering === 0 && !stillRegisteringActivations) return callback(activationRegistryError);
       }
     ],
       function (err, result) {
@@ -107,4 +131,33 @@ function main(params) {
 
 
   return whisk.async();
+}
+
+function registerActivation(db, activationId, activationName, timeMs, callback) {
+    db.insert({
+     _id: activationId,
+     actionName: activationName,
+     timeMs: timeMs,
+     timestamp: (new Date()).toISOString()
+   },
+   function (err, body, head) {
+     if (err) { 
+       if (err.statusCode == 409) {
+          console.log('Activation id already exists, continuing...');
+          activationPendingRegistering--;
+       } else {
+        stillRegisteringActivations = false;
+        activationPendingRegistering = 0;
+        console.log('[registerActivation] error: activationDb');
+        console.log(err);
+        activationRegistryError = err;
+       }
+     } else {
+        //console.log('[registerActivation] success: activationDb');
+        //console.log(body);
+        activationPendingRegistering--;
+     }
+     if (activationPendingRegistering === 0 && !stillRegisteringActivations) return callback(activationRegistryError);
+   }
+ );
 }

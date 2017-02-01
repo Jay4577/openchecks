@@ -116,7 +116,7 @@ function main(params) {
       }
 
       console.log("Creating resized images.");
-      if (params.fileName.toLowerCase().endsWith(".jpg") || params.fileName.toLowerCase().endsWith(".png")) {
+      if (params.fileName.toLowerCase().endsWith(".bmp") || params.fileName.toLowerCase().endsWith(".jpg") || params.fileName.toLowerCase().endsWith(".png")) {
         console.log("Resizing image to 300px wide - storing it in " + rootDirectory);
         gm(rootDirectory + "/" + params.fileName).resize(300).write(rootDirectory + "/" + medFileName, function(err) {
           if (err) {
@@ -201,14 +201,17 @@ function main(params) {
     function(data, callback) {
       if (!data) return callback(null);
       console.log("Attempting Cloudant insert of medium image into the archived database.");
+      var uuid1 = uuid.v1();
+      var attachmentName = uuid.v1(); //I'd rather use a simple md5 hash, but it's not available
       archivedDb.multipart.insert({
-          _id: medFileName
+            fileName: medFileName,
+            attachmentName: attachmentName
         }, [{
-          name: medFileName,
+          name: attachmentName,
           data: data,
           content_type: params.contentType
         }],
-        medFileName,
+        uuid1,
         function(err, body) {
           if (err && err.statusCode != 409) {
             console.log("Error with Cloudant medium insert.");
@@ -240,14 +243,17 @@ function main(params) {
       if (!data) return callback(null);
       
       console.log("Attempting Cloudant insert of small image into the archived database.");
+      var uuid1 = uuid.v1();
+      var attachmentName = uuid.v1(); //I'd rather use a simple md5 hash, but it's not available
       archivedDb.multipart.insert({
-          _id: smFileName
+            fileName: smFileName,
+            attachmentName: attachmentName
         }, [{
-          name: smFileName,
+          name: attachmentName,
           data: data,
           content_type: params.contentType
         }],
-        smFileName,
+        uuid1,
         function(err, body) {
           if (err && err.statusCode != 409) {
             console.log("Error with Cloudant small file insert.");
