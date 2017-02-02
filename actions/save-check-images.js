@@ -160,11 +160,20 @@ function main(params) {
     // Save original image data to Cloudant with an enriched name
     function (data, callback) {
       var uuid1 = uuid.v1();
-      var attachmentName = uuid.v1(); //I'd rather use a simple md5 hash, but it's not available
+      var attachmentName = "att-" + uuid1;
       console.log("Attempting insert of original image into the audited database. Id = " + uuid1);
+
+      var values = params.fileName.split('^');
+      var email = values[0];
+      var toAccount = values[1];
+      var amount = values[2];       
+
       auditedDb.multipart.insert({
         fileName: params.fileName,
-        attachmentName: attachmentName
+        attachmentName: attachmentName,
+        email: email,
+        toAccount: toAccount,
+        amount: amount
       }, [{
           name: attachmentName,
           data: data,

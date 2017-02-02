@@ -76,8 +76,10 @@ function install() {
   $WSK action create parse-check-data actions/parse-check-data.js \
     --param CLOUDANT_USER "$CLOUDANT_USER" \
     --param CLOUDANT_PASS "$CLOUDANT_PASS" \
+    --param CLOUDANT_HOST "$CLOUDANT_HOST" \
     --param CLOUDANT_AUDITED_DATABASE "$CLOUDANT_AUDITED_DATABASE" \
     --param CLOUDANT_PARSED_DATABASE "$CLOUDANT_PARSED_DATABASE" \
+	--param CLOUDANT_REJECTED_DATABASE "$CLOUDANT_REJECTED_DATABASE" \
     --param CURRENT_NAMESPACE "$CURRENT_NAMESPACE"
   $WSK action create record-check-deposit actions/record-check-deposit.js \
     --param CLOUDANT_USER "$CLOUDANT_USER" \

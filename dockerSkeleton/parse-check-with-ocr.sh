@@ -9,6 +9,13 @@ CLOUDANT_AUDITED_DATABASE=`cat params.json | jq -r '.CLOUDANT_AUDITED_DATABASE'`
 IMAGE_ID=`cat params.json | jq -r '.IMAGE_ID'`
 ATTACHMENT_NAME=`cat params.json | jq -r '.ATTACHMENT_NAME'`
 
+
+# Download the revision from Cloudant.
+curl -s -X GET -o imgInfo "https://$CLOUDANT_USER:$CLOUDANT_PASS@$CLOUDANT_USER.cloudant.com/$CLOUDANT_AUDITED_DATABASE/$IMAGE_ID"
+EMAIL=`cat imgInfo | jq -r '.email'`
+TOACCOUNT=`cat imgInfo | jq -r '.toAccount'`
+AMOUNT=`cat imgInfo | jq -r '.amount'`
+
 # Download the image from Cloudant.
 curl -s -X GET -o imgData \
 "https://$CLOUDANT_USER:$CLOUDANT_PASS@$CLOUDANT_USER.cloudant.com/$CLOUDANT_AUDITED_DATABASE/$IMAGE_ID/$ATTACHMENT_NAME?attachments=true&include_docs=true"
@@ -26,7 +33,7 @@ PLAINTEXT=`cat imgData.txt.txt | base64`
 PLAINTEXT=`echo "$PLAINTEXT" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/ /g'`
 
 # Return JSON formatted values.
-echo "{ \"result\": {\"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\", \"plaintext\": \"$PLAINTEXT\", \"attachmentname\": \"$ATTACHMENT_NAME\" } }"
+echo "{ \"result\": {\"email\": \"$EMAIL\",\"toAccount\": \"$TOACCOUNT\",\"amount\": \"$AMOUNT\", \"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\", \"plaintext\": \"$PLAINTEXT\", \"attachmentname\": \"$ATTACHMENT_NAME\" } }"
 
 
 

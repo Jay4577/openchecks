@@ -28,6 +28,7 @@ var fs = require('fs');
  *    another 'parsed' database with metadata and a confidence score.
  *
  * @param   params._id                        The id of the inserted record in the Cloudant 'audit' database that triggered this action
+ * @param   params.attachmentName
  * @param   params.CLOUDANT_USER              Cloudant username
  * @param   params.CLOUDANT_PASS              Cloudant password
  * @param   params.CLOUDANT_AUDITED_DATABASE  Cloudant database to store the original copy to
