@@ -120,13 +120,14 @@ function continueProcessingImages(params) {
       },
       blocking: true
     }).then(function(idAudited) { return function(ocrResult) {
-        console.log("OCR Result:", ocrResult);
-        var plainMicrCheckText = Buffer.from(ocrResult.plaintext, 'base64').toString("ascii");
+        var result = ocrResult.result.result;
+        console.log("OCR Result:", result);
+        var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
         console.log('Plain text: ' + plainMicrCheckText);
 
         var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
         if (bankingInfo.invalid()) {      
-            return insertRejectedCheckInfo(params, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
+            return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
                 .then(
                     function(key) { return function() {
                         console.log("Last Processed Key is now: ", key);
@@ -136,7 +137,7 @@ function continueProcessingImages(params) {
                     return continueProcessingImages(params);
                 });
         } else {
-            return insertProcessedCheckInfo(params, bankingInfo, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
+            return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
                 .then(
                     function(key) { return function() {
                         console.log("Last Processed Key is now: ", key);
