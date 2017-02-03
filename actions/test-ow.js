@@ -36,6 +36,7 @@ var openwhisk = require('openwhisk');
  */
 function main(params) {
     console.log(params);
+    console.log(process.env);
     
     var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
     var API_URL = process.env.OW_API_URL || process.env.__OW_API_HOST;
