@@ -120,12 +120,10 @@ function main(params) {
                                     }}(key)
                                 );
                         }
-                    }}(id)).catch(function(reason) {
-                        console.log("Last Sequence is now: ", key);
-                    }).then(function(key) { return function() {
-                        console.log("Last Sequence is now: ", key);
-                        return updateLastRetrievedKey(params, key); //acceptable race condition
-                    }}(key));
+                    }}(id), function(reason) {
+                        console.log("OCR Call failed.", reason);
+                        reject(reason);
+                    });
 
                     promises.push(nextPromise);
                 }
