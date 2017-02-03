@@ -69,7 +69,7 @@ function main(params) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
         if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
         console.log("Now building promises to chain... based on last retrieved key: " + lastRetrievedKey);
-        return new Promise(function() {
+        return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
                 //console.log("Request to get all docs returned: ",JSON.parse(body));
                 if (error) {
