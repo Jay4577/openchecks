@@ -18,17 +18,10 @@ var Cloudant = require('cloudant');
 var async = require('async');
 var fs = require('fs');
 var request = require('request');
-
-var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
-//var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
-var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
-var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
-var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
-console.log(owparams);
-var ow = openwhisk(owparams);
     
 var m_currentCursorPosition = 0;
 var m_auditedImages = [];
+var m_ow;
 
 /**
  * This action is triggered by a new check image added to a CouchDB database.
@@ -93,7 +86,7 @@ function main(params) {
     });
 }
 
-function continueProcessingImages(params) {    
+function continueProcessingImages(params) {
     var result = m_auditedImages[m_currentCursorPosition];
     if (!result) return new Promise().resolve({done: true});
     
@@ -102,9 +95,19 @@ function continueProcessingImages(params) {
 
     var id = result.id;
     var key = result.key;
-
+    
+    if (!m_ow) {
+        var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
+        //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
+        var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
+        var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
+        var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
+        console.log(owparams);
+        var m_ow = openwhisk(owparams);
+    }
+    
     console.log("Calling OCR docker action for image id:", id);
-    return ow.actions.invoke({
+    return m_ow.actions.invoke({
       actionName: "santander/parse-check-with-ocr",
       params: {
         CLOUDANT_HOST: params.CLOUDANT_HOST,
