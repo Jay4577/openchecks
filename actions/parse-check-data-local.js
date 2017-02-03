@@ -120,7 +120,8 @@ function continueProcessingImages(params) {
       },
       blocking: true
     }).then(function(idAudited) { return function(ocrResult) {
-        var result = ocrResult.result.result;
+        console.log("OCR Result:", result);
+        var result = ocrResult.response.result.result;
         console.log("OCR Result:", result);
         var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
         console.log('Plain text: ' + plainMicrCheckText);
