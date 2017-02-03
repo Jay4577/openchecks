@@ -118,8 +118,8 @@ function main(params) {
         });
     });
     
-    var promise;
-    for (var i = 1; i < promises.length; i++) promise = promiseStart.then(promises[i]);
+    var promise = promiseStart;
+    for (var i = 1; i < promises.length; i++) promise = promise.then(promises[i]);
     return promise;
   }).then(function() {
     return Promise(function(resolve) {
