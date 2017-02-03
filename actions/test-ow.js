@@ -43,8 +43,7 @@ function main(params) {
     var owparams = {api: API_URL, api_key: API_KEY, namespace: NAMESPACE}
     console.log(owparams);
     var ow = openwhisk(owparams);
-    ow.actions.list().then(function (actions) {
+    return ow.actions.list().then(function (actions) {
         console.log(actions);
     }).catch(function(reason) { console.log("wtf?", reason); });
-    return { done: true};
 }
