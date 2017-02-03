@@ -39,11 +39,16 @@ var request = require('request');
  * @return                                    Standard OpenWhisk success/error response
  */
 function main(params) {
-  console.log(params);
-  console.log(process.env);
-  var ow = openwhisk();
-  
-  var p = new Promise(function(resolve, reject) {
+    console.log(params);
+    
+    var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
+    var API_URL = process.env.OW_API_URL || process.env.__OW_API_HOST;
+    var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
+    var owparams = {api: API_URL, api_key: API_KEY, namespace: NAMESPACE}
+    console.log(owparams);
+    var ow = openwhisk(owparams);
+
+    var p = new Promise(function(resolve, reject) {
     var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs";
     
     request.get(url, function(error, response, body) {
