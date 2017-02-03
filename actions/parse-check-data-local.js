@@ -40,6 +40,7 @@ var request = require('request');
  */
 function main(params) {
   console.log(params);
+  console.log(process.env);
   var ow = openwhisk();
   
   var p = new Promise(function(resolve, reject) {
@@ -87,7 +88,7 @@ function main(params) {
 
                     console.log("Calling OCR docker action for image id:", id);
                     var nextPromise = ow.actions.invoke({
-                      actionName: "/" + params.CURRENT_NAMESPACE + "/santander/parse-check-with-ocr",
+                      actionName: "santander/parse-check-with-ocr",
                       params: {
                         CLOUDANT_HOST: params.CLOUDANT_HOST,
                         CLOUDANT_USER: params.CLOUDANT_USER,
@@ -120,12 +121,10 @@ function main(params) {
                                     }}(key)
                                 );
                         }
-                    }}(id)).catch(function(reason) {
-                        console.log("Last Sequence is now: ", key);
-                    }).then(function(key) { return function() {
-                        console.log("Last Sequence is now: ", key);
-                        return updateLastRetrievedKey(params, key); //acceptable race condition
-                    }}(key));
+                    }}(id), function(reason) {
+                        console.log("OCR Call failed.", reason);
+                        reject(reason);
+                    });
 
                     promises.push(nextPromise);
                 }
