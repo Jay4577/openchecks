@@ -51,19 +51,19 @@ function main(params) {
             var result = JSON.parse(body);
             var rowsAmount = result.total_rows;
             
-            var lastSequence;
+            var lastRetrievedKey;
             if (rowsAmount !== 0) {
-                lastSequence = result.rows[0].lastSequence;
+                lastRetrievedKey = result.rows[0].lastRetrievedKey;
             } else {
-                lastSequence = 0;
+                lastRetrievedKey = 0;
             }
-            console.log("Last Sequence: " + lastSequence);
-            resolve(lastSequence);
+            console.log("lastRetrievedKey: " + lastRetrievedKey);
+            resolve(lastRetrievedKey);
         }
     });
-  }).then(function(lastSequence) {
-    var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_changes";
-    if (lastSequence) url += "?since=" + lastSequence;
+  }).then(function(lastRetrievedKey) {
+    var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
+    if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
     
     var promises = [];
     
@@ -78,8 +78,8 @@ function main(params) {
                     var result = results[i];
                     if (result.deleted) continue;
 
-                    var sequence = result.seq[1];
                     var id = result.id;
+                    var key = result.key;
 
                     console.log("Calling OCR docker action for image id:", id);
                     var nextPromise = openwhisk.actions.invoke({
@@ -104,10 +104,10 @@ function main(params) {
                         } else {
                             return insertProcessedCheckInfo(params, bankingInfo, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount);
                         }
-                    }}(id)).then(function(lastSeq) { return function() {
-                        console.log("Last Sequence is now: ", lastSeq);
-                        return updateLastSequenceNumber(params, lastSeq); //acceptable race condition
-                    }}(sequence));
+                    }}(id)).then(function(key) { return function() {
+                        console.log("Last Sequence is now: ", key);
+                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                    }}(key));
 
                     promises.push(nextPromise);
                 }
@@ -129,7 +129,7 @@ function main(params) {
   return p;
 }
 
-function updateLastSequenceNumber(params, lastSequence) {
+function updateLastRetrievedKey(params, lastRetrievedKey) {
     return new Promise(function(resolve, reject) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE;
         request({
@@ -137,12 +137,12 @@ function updateLastSequenceNumber(params, lastSequence) {
             method: "POST",
             json: true,
             body: {
-                _id: "lastSequenceUniqueId",
-                lastSequence: lastSequence
+                _id: "lastRetrievedKeyUniqueId",
+                lastRetrievedKey: lastRetrievedKey
             }
         }, function(error, incomingMessage, response) {
             if (error && incomingMessage.statusCode != 409) {
-                console.log("Update of last sequence failed:", lastSequence, error);
+                console.log("Update of lastRetrievedKey failed:", lastRetrievedKey, error);
                 reject(error);
             } else {
                 resolve(response);
