@@ -40,8 +40,9 @@ function main(params) {
     
     var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
     var API_URL = process.env.OW_API_URL || process.env.__OW_API_HOST;
+    var API_HOST = "172.17.0.1";
     var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
-    var owparams = {api: API_URL, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
+    var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
     console.log(owparams);
     var ow = openwhisk(owparams);
     return ow.actions.list().then(function (actions) {
