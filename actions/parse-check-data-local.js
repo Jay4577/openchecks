@@ -68,7 +68,7 @@ function main(params) {
     }).then(function(lastRetrievedKey) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
         if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
-        console.log("Now building promises to chain... based on last retrieved key: " + lastRetrievedKey);
+
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
                 //console.log("Request to get all docs returned: ",JSON.parse(body));
@@ -91,7 +91,7 @@ function continueProcessingImages(params) {
     var result = m_auditedImages[m_currentCursorPosition];
     if (!result) return new Promise().resolve({done: true});
     
-    if (m_currentCursorPosition===0) console.log("First result document is ", result);
+    //if (m_currentCursorPosition===0) console.log("First result document is ", result);
     m_currentCursorPosition++;
 
     var id = result.id;
@@ -103,7 +103,7 @@ function continueProcessingImages(params) {
         var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
         var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
         var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
-        console.log(owparams);
+        //console.log(owparams);
         var m_ow = openwhisk(owparams);
     }
     
