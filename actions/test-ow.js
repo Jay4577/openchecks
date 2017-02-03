@@ -45,6 +45,6 @@ function main(params) {
     var ow = openwhisk(owparams);
     ow.actions.list().then(function (actions) {
         console.log(actions);
-    });
-    return 1;
+    }).catch(function(reason) { console.log("wtf?", reason); });
+    return { done: true};
 }
