@@ -69,19 +69,20 @@ function main(params) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
         if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
         console.log("Now building promises to chain... based on last retrieved key: " + lastRetrievedKey);
-        
-        request.get(url, function(error, response, body) {
-            //console.log("Request to get all docs returned: ",JSON.parse(body));
-            if (error) {
-                console.log("Retrieving 'all' documents failed...", error);
-                reject(error);
-            } else {
-                var results = JSON.parse(body).rows;
-                console.log("Documents Found: " + results.length + " records.");
-                m_auditedImages = results;
-                m_currentCursorPosition = 0;
-                return continueProcessingImages(params);
-            }
+        return new Promise(function() {
+            request.get(url, function(error, response, body) {
+                //console.log("Request to get all docs returned: ",JSON.parse(body));
+                if (error) {
+                    console.log("Retrieving 'all' documents failed...", error);
+                    reject(error);
+                } else {
+                    var results = JSON.parse(body).rows;
+                    console.log("Documents Found: " + results.length + " records.");
+                    m_auditedImages = results;
+                    m_currentCursorPosition = 0;
+                    return continueProcessingImages(params);
+                }
+            });
         });
     });
 }
