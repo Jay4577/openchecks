@@ -40,6 +40,7 @@ var request = require('request');
  */
 function main(params) {
   console.log(params);
+  var ow = openwhisk();
   
   var p = new Promise(function(resolve, reject) {
     var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs";
@@ -70,7 +71,7 @@ function main(params) {
     console.log("Now building promises to chain... based on last retrieved key: " + lastRetrievedKey);
     var promiseStart = new Promise(function(resolve, reject) {
         request.get(url, function(error, response, body) {
-            console.log("Request to get all docs returned: ",JSON.parse(body));
+            //console.log("Request to get all docs returned: ",JSON.parse(body));
             if (error) {
                 console.log("Retrieving 'all' documents failed...", error);
                 reject(error);
@@ -85,7 +86,7 @@ function main(params) {
                     var key = result.key;
 
                     console.log("Calling OCR docker action for image id:", id);
-                    var nextPromise = openwhisk.actions.invoke({
+                    var nextPromise = ow.actions.invoke({
                       actionName: "/" + params.CURRENT_NAMESPACE + "/santander/parse-check-with-ocr",
                       params: {
                         CLOUDANT_HOST: params.CLOUDANT_HOST,
