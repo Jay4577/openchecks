@@ -1,6 +1,9 @@
 #!/bin/bash
+echo "Received parameters $1"
 
 echo $1 > params.json
+
+echo "Entering bash program."
 
 # Cloudant credentials and the _id of the attachment/document to download.
 CLOUDANT_HOST=`cat params.json | jq -r '.CLOUDANT_HOST'`

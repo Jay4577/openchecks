@@ -148,8 +148,8 @@ function continueProcessingImages(params) {
         }
     }}(id), function(reason) {
         console.log("OCR Call failed.", reason);
-        reject(reason);
-    });    
+        return new Promise().reject(reason);
+    });
 }
 
 function updateLastRetrievedKey(params, lastRetrievedKey) {
