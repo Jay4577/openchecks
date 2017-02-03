@@ -70,16 +70,17 @@ function main(params) {
     console.log("Now building promises to chain... based on last retrieved key: " + lastRetrievedKey);
     var promiseStart = new Promise(function(resolve, reject) {
         request.get(url, function(error, response, body) {
+            console.log("Request to get all docs returned: ",JSON.parse(body));
             if (error) {
                 console.log("Retrieving 'all' documents failed...", error);
                 reject(error);
             } else {
-                var results = JSON.parse(body).results;
+                var results = JSON.parse(body).rows;
                 console.log("Documents Found: " + results.length + " records.");
                 for(var i=0; i<results.length; i++) {
                     var result = results[i];
-                    if (result.deleted) continue;
-
+                    
+                    if (i===0) console.log("First result document is ", result);
                     var id = result.id;
                     var key = result.key;
 
