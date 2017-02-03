@@ -34,6 +34,8 @@ class ActionRunner:
         defaultBinary = '/action/exec'
         self.source = source if source else defaultBinary
         self.binary = binary if binary else defaultBinary
+        sys.stdout.write('%s\n' % self.source)
+        sys.stdout.write('%s\n' % self.binary)
 
     # extracts from the JSON object message a 'code' property and
     # writes it to the <source> path. The source code may have an
@@ -85,16 +87,20 @@ class ActionRunner:
     def run(self, args, env):
         def error(msg):
             # fall through (exception and else case are handled the same way)
+            sys.stdout.write('%s\n' % 'Yeah, here.')
             sys.stdout.write('%s\n' % msg)
             return (502, { 'error': 'The action did not return a dictionary.'})
 
         try:
+            sys.stdout.write('%s\n' % 'Start1')
             input = json.dumps(args)
+            sys.stdout.write('%s\n' % 'Start2')
             p = subprocess.Popen(
                 [ self.binary, input ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 env=env)
+            sys.stdout.write('%s\n' % 'Start3')
         except Exception as e:
             return error(e)
 
