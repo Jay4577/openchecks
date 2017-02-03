@@ -104,11 +104,25 @@ function main(params) {
 
                         var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
                         if (bankingInfo.invalid()) {      
-                            return insertRejectedCheckInfo(params, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount);
+                            return insertRejectedCheckInfo(params, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
+                                .then(
+                                    function(key) { return function() {
+                                        console.log("Last Processed Key is now: ", key);
+                                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                                    }}(key)
+                                );
                         } else {
-                            return insertProcessedCheckInfo(params, bankingInfo, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount);
+                            return insertProcessedCheckInfo(params, bankingInfo, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
+                                .then(
+                                    function(key) { return function() {
+                                        console.log("Last Processed Key is now: ", key);
+                                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                                    }}(key)
+                                );
                         }
-                    }}(id)).then(function(key) { return function() {
+                    }}(id)).catch(function(reason) {
+                        console.log("Last Sequence is now: ", key);
+                    }).then(function(key) { return function() {
                         console.log("Last Sequence is now: ", key);
                         return updateLastRetrievedKey(params, key); //acceptable race condition
                     }}(key));
