@@ -19,6 +19,17 @@ var async = require('async');
 var fs = require('fs');
 var request = require('request');
 
+var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
+//var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
+var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
+var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
+var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
+console.log(owparams);
+var ow = openwhisk(owparams);
+    
+var m_currentCursorPosition = 0;
+var m_auditedImages = [];
+
 /**
  * This action is triggered by a new check image added to a CouchDB database.
  * This action is idempotent. If it fails, it can be retried.
@@ -40,16 +51,8 @@ var request = require('request');
  */
 function main(params) {
     console.log(params);
-    
-    var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
-    //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
-    var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
-    var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
-    var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
-    console.log(owparams);
-    var ow = openwhisk(owparams);
 
-    var p = new Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs";
 
         request.get(url, function(error, response, body) {
@@ -72,79 +75,77 @@ function main(params) {
     }).then(function(lastRetrievedKey) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
         if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
-
-        var promises = [];
-
         console.log("Now building promises to chain... based on last retrieved key: " + lastRetrievedKey);
-        var promiseStart = new Promise(function(resolve, reject) {
-            request.get(url, function(error, response, body) {
-                //console.log("Request to get all docs returned: ",JSON.parse(body));
-                if (error) {
-                    console.log("Retrieving 'all' documents failed...", error);
-                    reject(error);
-                } else {
-                    var results = JSON.parse(body).rows;
-                    console.log("Documents Found: " + results.length + " records.");
-                    for(var i=0; i<results.length; i++) {
-                        var result = results[i];
-
-                        if (i===0) console.log("First result document is ", result);
-                        var id = result.id;
-                        var key = result.key;
-
-                        console.log("Calling OCR docker action for image id:", id);
-                        var nextPromise = ow.actions.invoke({
-                          actionName: "santander/parse-check-with-ocr",
-                          params: {
-                            CLOUDANT_HOST: params.CLOUDANT_HOST,
-                            CLOUDANT_USER: params.CLOUDANT_USER,
-                            CLOUDANT_PASS: params.CLOUDANT_PASS,
-                            CLOUDANT_AUDITED_DATABASE: params.CLOUDANT_AUDITED_DATABASE,
-                            IMAGE_ID: id,
-                            ATTACHMENT_NAME: "att-" + id
-                          },
-                          blocking: true
-                        }).then(function(idAudited) { return function(ocrResult) {
-                            console.log("OCR Result:", ocrResult);
-                            var plainMicrCheckText = Buffer.from(ocrResult.plaintext, 'base64').toString("ascii");
-                            console.log('Plain text: ' + plainMicrCheckText);
-
-                            var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
-                            if (bankingInfo.invalid()) {      
-                                return insertRejectedCheckInfo(params, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
-                                    .then(
-                                        function(key) { return function() {
-                                            console.log("Last Processed Key is now: ", key);
-                                            return updateLastRetrievedKey(params, key); //acceptable race condition
-                                        }}(key)
-                                    );
-                            } else {
-                                return insertProcessedCheckInfo(params, bankingInfo, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
-                                    .then(
-                                        function(key) { return function() {
-                                            console.log("Last Processed Key is now: ", key);
-                                            return updateLastRetrievedKey(params, key); //acceptable race condition
-                                        }}(key)
-                                    );
-                            }
-                        }}(id), function(reason) {
-                            console.log("OCR Call failed.", reason);
-                            reject(reason);
-                        });
-
-                        promises.push(nextPromise);
-                    }
-                    resolve(true);
-                }
-            });
+        
+        request.get(url, function(error, response, body) {
+            //console.log("Request to get all docs returned: ",JSON.parse(body));
+            if (error) {
+                console.log("Retrieving 'all' documents failed...", error);
+                reject(error);
+            } else {
+                var results = JSON.parse(body).rows;
+                console.log("Documents Found: " + results.length + " records.");
+                m_auditedImages = results;
+                m_currentCursorPosition = 0;
+                return continueProcessingImages(params);
+            }
         });
-
-        var promise = promiseStart;
-        for (var i = 1; i < promises.length; i++) promise = promise.then(promises[i]);
-        return promise.resolve({ done: true });
     });
+}
+
+function continueProcessingImages(params) {    
+    var result = m_auditedImages[m_currentCursorPosition];
+    if (!result) return new Promise().resolve({done: true});
     
-    return p;
+    if (m_currentCursorPosition===0) console.log("First result document is ", result);
+    m_currentCursorPosition++;
+
+    var id = result.id;
+    var key = result.key;
+
+    console.log("Calling OCR docker action for image id:", id);
+    return ow.actions.invoke({
+      actionName: "santander/parse-check-with-ocr",
+      params: {
+        CLOUDANT_HOST: params.CLOUDANT_HOST,
+        CLOUDANT_USER: params.CLOUDANT_USER,
+        CLOUDANT_PASS: params.CLOUDANT_PASS,
+        CLOUDANT_AUDITED_DATABASE: params.CLOUDANT_AUDITED_DATABASE,
+        IMAGE_ID: id,
+        ATTACHMENT_NAME: "att-" + id
+      },
+      blocking: true
+    }).then(function(idAudited) { return function(ocrResult) {
+        console.log("OCR Result:", ocrResult);
+        var plainMicrCheckText = Buffer.from(ocrResult.plaintext, 'base64').toString("ascii");
+        console.log('Plain text: ' + plainMicrCheckText);
+
+        var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
+        if (bankingInfo.invalid()) {      
+            return insertRejectedCheckInfo(params, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
+                .then(
+                    function(key) { return function() {
+                        console.log("Last Processed Key is now: ", key);
+                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                    }}(key)
+                ).then(function() {
+                    return continueProcessingImages(params);
+                });
+        } else {
+            return insertProcessedCheckInfo(params, bankingInfo, idAudited, ocrResult.email, ocrResult.toAccount, ocrResult.amount)
+                .then(
+                    function(key) { return function() {
+                        console.log("Last Processed Key is now: ", key);
+                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                    }}(key)
+                ).then(function() {
+                    return continueProcessingImages(params);
+                });
+        }
+    }}(id), function(reason) {
+        console.log("OCR Call failed.", reason);
+        reject(reason);
+    });    
 }
 
 function updateLastRetrievedKey(params, lastRetrievedKey) {
