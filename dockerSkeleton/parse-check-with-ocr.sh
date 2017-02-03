@@ -11,7 +11,7 @@ CLOUDANT_USER=`cat params.json | jq -r '.CLOUDANT_USER'`
 CLOUDANT_PASS=`cat params.json | jq -r '.CLOUDANT_PASS'`
 CLOUDANT_AUDITED_DATABASE=`cat params.json | jq -r '.CLOUDANT_AUDITED_DATABASE'`
 IMAGE_ID=`cat params.json | jq -r '.IMAGE_ID'`
-ATTACHMENT_NAME=`cat params.json | jq -r '.ATTACHMENT_NAME'`
+# ATTACHMENT_NAME=`cat params.json | jq -r '.ATTACHMENT_NAME'`
 
 
 # Download the revision from Cloudant.
@@ -21,6 +21,7 @@ curl -s -X GET -o imgInfo "http://$CLOUDANT_HOST/$CLOUDANT_AUDITED_DATABASE/$IMA
 EMAIL=`cat imgInfo | jq -r '.email'`
 TOACCOUNT=`cat imgInfo | jq -r '.toAccount'`
 AMOUNT=`cat imgInfo | jq -r '.amount'`
+ATTACHMENT_NAME=`cat imgInfo | jq -r '.attachmentName'`
 
 # Download the image from Cloudant.
 echo "Getting actual image attachment from cloudant..."
