@@ -43,6 +43,7 @@ var m_ow;
  * @param   params.CLOUDANT_PARSED_DATABASE   Cloudant database to store the parsed check data to
  * @param   params.CLOUDANT_REJECTED_DATABASE Cloudant database to store the rejected check data to
  * @param   params.CURRENT_NAMESPACE          The current namespace so we can call the OCR action by name
+ * @param   params.REQUESTS_PER_SECONDS       request.get fails when too many requests per second (ulimits?) - setting it to 15 seems to work
  * @return                                    Standard OpenWhisk success/error response
  */
 function main(params) {
@@ -92,23 +93,22 @@ function main(params) {
                     m_auditedImages = [];
                     m_alreadyProcessedDocs = 0;
                     m_alreadyCheckedDocs = 0;
-                    sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, 15);
+                    sendGetRequestsToVerifyDocumentExistence(params, resolve, reject);
                 }
             });
         });
     });
 }
 
-function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amountAtATime) {
+function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject) {
     var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_PARSED_DATABASE + "/";
     
-    for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+amountAtATime, m_filteredResults.length); i++) {
+    for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+params.REQUESTS_PER_SECONDS, m_filteredResults.length); i++) {
         var urlLocal = urlBase + m_filteredResults[i].id;
         //console.log("About to query id:", m_filteredResults[i].id);
         request.get(urlLocal, function(result) { return function(error, response, body) {
-            console.log("Returning from individual doc query:", response.statusCode);
             if (response.statusCode == 404) {
-                console.log("Found id!", result.id);
+                console.log("Found id to process!", result.id);
                 m_auditedImages.push(result);
                 if (m_auditedImages.length + m_alreadyProcessedDocs === m_filteredResults.length) {
                     console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
@@ -132,10 +132,10 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
         }}(m_filteredResults[i]));
     }
     
-    m_alreadyCheckedDocs+=amountAtATime;
+    m_alreadyCheckedDocs+=params.REQUESTS_PER_SECONDS;
     
     if (m_alreadyCheckedDocs < m_filteredResults.length-1)
-        setTimeout(function() { sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amountAtATime); }, 1000);
+        setTimeout(function() { sendGetRequestsToVerifyDocumentExistence(params, resolve, reject); }, 1000);
 }
 
 function continueProcessingImages(params, resolve, reject) {
