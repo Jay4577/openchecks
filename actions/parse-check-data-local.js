@@ -114,7 +114,7 @@ function continueProcessingImages(params) {
         var m_ow = openwhisk(owparams);
     }
     
-    console.log("Calling OCR docker action for image id:", id);
+    console.log("[" + m_currentCursorPosition + "] Calling OCR docker action for image id:", id);
     return m_ow.actions.invoke({
       actionName: "santander/parse-check-with-ocr",
       params: {
