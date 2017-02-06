@@ -82,9 +82,8 @@ function main(params) {
                     //console.log(JSON.parse(body));
                     //console.log(url);
                     var results = JSON.parse(body).rows;
-                    console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs, results);
-                    var filteredResults = results.filter(function(result) {
-                        return result.doc.timestamp >= lastTimestampMs; });                    
+                    console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs);
+                    var filteredResults = results.filter(function(result) { return result.doc.timestamp >= lastTimestampMs; });                    
                     console.log("FILTERED Documents Found: " + filteredResults.length + " records.");
                     m_auditedImages = filteredResults;
                     m_currentCursorPosition = 0;
@@ -128,11 +127,9 @@ function continueProcessingImages(params) {
       },
       blocking: true
     }).then(function(idAudited) { return function(ocrResult) {
-        console.log("OCR Call Succeeded.", ocrResult);
+        console.log("OCR Call Succeeded.");
         var result = ocrResult.response.result.result;
-        //console.log("OCR Result:", result);
         var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
-        //console.log('Plain text: ' + plainMicrCheckText);
 
         var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
         if (bankingInfo.invalid()) {      
