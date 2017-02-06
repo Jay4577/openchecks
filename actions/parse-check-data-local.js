@@ -78,8 +78,8 @@ function main(params) {
                     console.log("Retrieving 'all' documents failed...", error);
                     reject(error);
                 } else {
-                    console.log(JSON.parse(body));
-                    console.log(url);
+                    //console.log(JSON.parse(body));
+                    //console.log(url);
                     var results = JSON.parse(body).rows;
                     console.log("Documents Found: " + results.length + " records.");
                     m_auditedImages = results;
@@ -134,9 +134,13 @@ function continueProcessingImages(params) {
         if (bankingInfo.invalid()) {      
             return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
                 .then(
-                    function(key) { return function() {
-                        console.log("Last Processed Key is now: ", key);
-                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                    function(key) { return function(updateKey) {
+                        if (updateKey) {
+                            console.log("Last Processed Key is now: ", key);
+                            return updateLastRetrievedKey(params, key); //acceptable race condition
+                        } else {
+                            return Promise.resolve(true);
+                        }
                     }}(key)
                 ).then(function() {
                     return continueProcessingImages(params);
@@ -144,9 +148,13 @@ function continueProcessingImages(params) {
         } else {
             return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
                 .then(
-                    function(key) { return function() {
-                        console.log("Last Processed Key is now: ", key);
-                        return updateLastRetrievedKey(params, key); //acceptable race condition
+                    function(key) { return function(updateKey) {
+                        if (updateKey) {
+                            console.log("Last Processed Key is now: ", key);
+                            return updateLastRetrievedKey(params, key); //acceptable race condition
+                        } else {
+                            return Promise.resolve(true);
+                        }
                     }}(key)
                 ).then(function() {
                     return continueProcessingImages(params);
@@ -200,7 +208,7 @@ function insertRejectedCheckInfo(params, idParsedRecord, email, toAccount, amoun
         }, function(error, incomingMessage, response) {
             if (incomingMessage.statusCode == 409) {
                 console.log("Rejected Record already existed:", idParsedRecord);
-                resolve(response);
+                resolve(false);
             } else if (error) {
                 console.log("Creation of rejected record failed:", idParsedRecord, error);
                 reject(error);
@@ -237,7 +245,7 @@ function insertProcessedCheckInfo(params, bankingInfo, idParsedRecord, email, to
         }, function(error, incomingMessage, response) {
             if (incomingMessage.statusCode == 409) {
                 console.log("Processed already existed:", idParsedRecord);
-                resolve(response);
+                resolve(false);
             } else if (error) {
                 console.log("Creation of processed record failed:", idParsedRecord, error);
                 reject(error);
@@ -282,8 +290,8 @@ function parseMicrDataToBankingInformation(micrCheckRawInformation) {
   var accountRegExp = /(\[\d{9}\[)( ?)([0-9A-Z]+@)/igm;
   var accountMatches = accountRegExp.exec(micrCheckRawInformation);
 
-  console.log("Matches for account number: ");
-  console.log(accountMatches);
+  //console.log("Matches for account number: ");
+  //console.log(accountMatches);
   if (accountMatches === null || accountMatches.length === 0)
     return new BankCheckMicrInformation(routingNumber, "-1");
   if (accountMatches.length > 4)
