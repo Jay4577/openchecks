@@ -91,24 +91,25 @@ function main(params) {
                     m_alreadyProcessedDocs = 0;
                     
                     var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/";
-                    filteredResults.forEach(function(result) {
-                        var urlLocal = urlBase + result.id;
-                        console.log(urlLocal);
-                        request.get(urlLocal, function(error, response, body) {
-                            console.log("Returning from individual doc query:", error, response, body);
-                            if (response.statusCode == 404) {
-                                m_auditedImages.push(result);
-                                if (m_auditedImages.length + m_alreadyProcessedDocs === filteredResults.length) {
-                                    console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
-                                    continueProcessingImages(params, resolve);
-                                }
-                            } else if (error) {
-                                reject(error);
-                            } else {
-                                m_alreadyProcessedDocs++;
-                            }                            
-                        });
-                    });
+                    for(var i=0; i<filteredResults.length; i++) {
+                        async.queue(function(result) { return function() {
+                            var urlLocal = urlBase + result.id;
+                            request.get(urlLocal, function(error, response, body) {
+                                console.log("Returning from individual doc query:", error, response, body);
+                                if (response.statusCode == 404) {
+                                    m_auditedImages.push(result);
+                                    if (m_auditedImages.length + m_alreadyProcessedDocs === filteredResults.length) {
+                                        console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
+                                        continueProcessingImages(params, resolve);
+                                    }
+                                } else if (error) {
+                                    reject(error);
+                                } else {
+                                    m_alreadyProcessedDocs++;
+                                }                            
+                            });
+                        }}(filteredResults[i]), 10);
+                    }
                 }
             });
         });
