@@ -100,7 +100,7 @@ function main(params) {
 }
 
 function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amountAtATime) {
-    var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/";
+    var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_PARSED_DATABASE + "/";
     
     for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+amountAtATime, m_filteredResults.length); i++) {
         var urlLocal = urlBase + m_filteredResults[i].id;
@@ -120,6 +120,14 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
             } else {
                 console.log("Existing id:", result.id);
                 m_alreadyProcessedDocs++;
+                if (m_auditedImages.length + m_alreadyProcessedDocs === m_filteredResults.length) {
+                    console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
+                    if (m_auditedImages.length > 0) {
+                        continueProcessingImages(params, resolve, reject);
+                    } else {
+                        resolve({done: true});
+                    }
+                }                
             }                            
         }}(m_filteredResults[i]));
     }
