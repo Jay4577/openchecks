@@ -46,7 +46,7 @@ function main(params) {
     console.log(params);
 
     return new Promise(function(resolve, reject) {
-        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs?limit=1&descending=true";
+        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs?limit=1&descending=true&include_docs=true";
 
         request.get(url, function(error, response, body) {
             if (error) {
@@ -57,7 +57,8 @@ function main(params) {
 
                 var lastRetrievedKey, rev;
                 if (rowsAmount !== 0) {
-                    lastRetrievedKey = result.rows[0].lastRetrievedKey;
+                    lastRetrievedKey = result.rows[0].doc.lastRetrievedKey;
+                    rev = 0;
                 } else {
                     lastRetrievedKey = 0;
                     rev = 0;
