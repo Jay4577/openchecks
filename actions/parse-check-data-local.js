@@ -92,7 +92,7 @@ function main(params) {
                     m_auditedImages = [];
                     m_alreadyProcessedDocs = 0;
                     m_alreadyCheckedDocs = 0;
-                    sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, 5);
+                    sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, 10);
                 }
             });
         });
