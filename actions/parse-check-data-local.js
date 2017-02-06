@@ -91,7 +91,7 @@ function main(params) {
 
 function continueProcessingImages(params) {
     var result = m_auditedImages[m_currentCursorPosition];
-    if (!result) return new Promise().resolve({done: true});
+    if (!result) return Promise.resolve({done: true});
     
     //if (m_currentCursorPosition===0) console.log("First result document is ", result);
     m_currentCursorPosition++;
