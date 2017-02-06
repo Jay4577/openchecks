@@ -21,7 +21,9 @@ var request = require('request');
     
 var m_currentCursorPosition = 0;
 var m_alreadyProcessedDocs = 0;
+var m_alreadyCheckedDocs = 0;
 var m_auditedImages = [];
+var m_filteredResults = [];
 var m_ow;
 
 /**
@@ -84,39 +86,46 @@ function main(params) {
                     //console.log(url);
                     var results = JSON.parse(body).rows;
                     console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs);
-                    var filteredResults = results.filter(function(result) { return result.doc.timestamp >= lastTimestampMs; }); 
-                    console.log("FILTERED (by timestamp) Documents Found: " + filteredResults.length + " records.");
+                    m_filteredResults = results.filter(function(result) { return result.doc.timestamp >= lastTimestampMs; }); 
+                    console.log("FILTERED (by timestamp) Documents Found: " + m_filteredResults.length + " records.");
                     m_currentCursorPosition = 0;
                     m_auditedImages = [];
                     m_alreadyProcessedDocs = 0;
-                    
-                    var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/";
-                    for(var i=0; i<filteredResults.length; i++) {
-                        async.queue(function(result) { return function() {
-                            var urlLocal = urlBase + result.id;
-                            request.get(urlLocal, function(error, response, body) {
-                                console.log("Returning from individual doc query:", error, response, body);
-                                if (response.statusCode == 404) {
-                                    m_auditedImages.push(result);
-                                    if (m_auditedImages.length + m_alreadyProcessedDocs === filteredResults.length) {
-                                        console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
-                                        continueProcessingImages(params, resolve);
-                                    }
-                                } else if (error) {
-                                    reject(error);
-                                } else {
-                                    m_alreadyProcessedDocs++;
-                                }                            
-                            });
-                        }}(filteredResults[i]), 10);
-                    }
+                    m_alreadyCheckedDocs = 0;
+                    sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, 20);
                 }
             });
         });
     });
 }
 
-function continueProcessingImages(params, resolve) {
+function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amountAtATime) {
+    var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/";
+    
+    for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+amountAtATime, m_filteredResults.length); i++) {
+        var urlLocal = urlBase + m_filteredResults[i].id;
+        request.get(urlLocal, function(result) { return function(error, response, body) {
+            console.log("Returning from individual doc query:", error, response, body);
+            if (response.statusCode == 404) {
+                m_auditedImages.push(result);
+                if (m_auditedImages.length + m_alreadyProcessedDocs === m_filteredResults.length) {
+                    console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
+                    continueProcessingImages(params, resolve, reject);
+                }
+            } else if (error) {
+                reject(error);
+            } else {
+                m_alreadyProcessedDocs++;
+            }                            
+        }}(m_filteredResults[i]));
+        m_alreadyCheckedDocs++;
+    }
+    
+    if (m_alreadyCheckedDocs < m_filteredResults.length-1)
+        setTimeout(function() { sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amountAtATime); }, 1000);
+}
+
+function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
     if (!result) resolve({done: true});
     
@@ -166,7 +175,7 @@ function continueProcessingImages(params, resolve) {
                         }
                     }}(result.timestamp)
                 ).then(function() {
-                    return continueProcessingImages(params, resolve);
+                    return continueProcessingImages(params, resolve, reject);
                 });
         } else {
             return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
@@ -180,12 +189,12 @@ function continueProcessingImages(params, resolve) {
                         }
                     }}(result.timestamp)
                 ).then(function() {
-                    return continueProcessingImages(params, resolve);
+                    return continueProcessingImages(params, resolve, reject);
                 });
         }
     }}(id), function(reason) {
         console.log("OCR Call failed.", reason);
-        return Promise.reject(reason);
+        reject(reason);
     });
 }
 
