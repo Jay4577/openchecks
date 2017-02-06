@@ -83,9 +83,8 @@ function main(params) {
                     //console.log(url);
                     var results = JSON.parse(body).rows;
                     console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs, results);
-                    var filteredResults = results.filter(function(doc) { 
-                        console.log(doc);
-                        return doc.timestamp >= lastTimestampMs; });                    
+                    var filteredResults = results.filter(function(result) {
+                        return result.doc.timestamp >= lastTimestampMs; });                    
                     console.log("FILTERED Documents Found: " + filteredResults.length + " records.");
                     m_auditedImages = filteredResults;
                     m_currentCursorPosition = 0;
