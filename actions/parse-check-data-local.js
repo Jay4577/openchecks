@@ -68,7 +68,7 @@ function main(params) {
             }
         });
     }).then(function(lastTimestampMsRev) {
-        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
+        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs?include_docs=true";
         var lastTimestampMs = lastTimestampMsRev.lastTimestampMs;
         if (lastTimestampMs > 0) lastTimestampMs = lastTimestampMs - 1000*60*2; //review what was done within the last 2 minutes of the last processed timestamp, or after
 
@@ -82,7 +82,7 @@ function main(params) {
                     //console.log(JSON.parse(body));
                     //console.log(url);
                     var results = JSON.parse(body).rows;
-                    console.log("TOTAL Documents Found: " + results.length + " records.");
+                    console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs);
                     var filteredResults = results.filter(function(doc) { return doc.timestamp >= lastTimestampMs; });                    
                     console.log("FILTERED Documents Found: " + filteredResults.length + " records.");
                     m_auditedImages = filteredResults;

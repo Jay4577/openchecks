@@ -29,8 +29,7 @@ var async = require('async');
  * @param   params._id                            The id of the record in the Cloudant 'processed' database
  * @param   params.CLOUDANT_USER                 Cloudant username
  * @param   params.CLOUDANT_PASS                 Cloudant password
- * @param   params.CLOUDANT_PARSED_DATABASE      Cloudant database to retrieve the parsed from
- * @param   params.CLOUDANT_PROCESSSED_DATABASE  Cloudant database to store the processed data to
+ * @param   params.CLOUDANT_PROCESSED_DATABASE  Cloudant database to store the processed data to
  * @param   params.SENDGRID_API_KEY              Cloudant password
  * @param   params.SENDGRID_FROM_ADDRESS         Address to set as sender
  * @return                                       Standard OpenWhisk success/error response
