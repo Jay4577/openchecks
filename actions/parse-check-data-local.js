@@ -106,7 +106,7 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
         var urlLocal = urlBase + m_filteredResults[i].id;
         //console.log("About to query id:", m_filteredResults[i].id);
         request.get(urlLocal, function(result) { return function(error, response, body) {
-            console.log("Returning from individual doc query:", body, response.statusCode);
+            console.log("Returning from individual doc query:", response.statusCode);
             if (response.statusCode == 404) {
                 console.log("Found id!", result.id);
                 m_auditedImages.push(result);
