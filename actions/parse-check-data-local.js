@@ -46,7 +46,7 @@ function main(params) {
     console.log(params);
 
     return new Promise(function(resolve, reject) {
-        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs";
+        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE + "/_all_docs?limit=1&descending=true";
 
         request.get(url, function(error, response, body) {
             if (error) {
@@ -55,18 +55,20 @@ function main(params) {
                 var result = JSON.parse(body);
                 var rowsAmount = result.total_rows;
 
-                var lastRetrievedKey;
+                var lastRetrievedKey, rev;
                 if (rowsAmount !== 0) {
                     lastRetrievedKey = result.rows[0].lastRetrievedKey;
                 } else {
                     lastRetrievedKey = 0;
+                    rev = 0;
                 }
                 console.log("lastRetrievedKey: " + lastRetrievedKey);
-                resolve(lastRetrievedKey);
+                resolve( { lastRetrievedKey: lastRetrievedKey, _rev: rev} );
             }
         });
-    }).then(function(lastRetrievedKey) {
+    }).then(function(lastRetrievedKeyRev) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
+        var lastRetrievedKey = lastRetrievedKeyRev.lastRetrievedKey;
         if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
 
         return new Promise(function(resolve, reject) {
@@ -120,7 +122,6 @@ function continueProcessingImages(params) {
       },
       blocking: true
     }).then(function(idAudited) { return function(ocrResult) {
-        console.log("OCR Result:", result);
         var result = ocrResult.response.result.result;
         console.log("OCR Result:", result);
         var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
@@ -154,6 +155,7 @@ function continueProcessingImages(params) {
     });
 }
 
+//it´s in fact an insert
 function updateLastRetrievedKey(params, lastRetrievedKey) {
     return new Promise(function(resolve, reject) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE;
@@ -162,7 +164,6 @@ function updateLastRetrievedKey(params, lastRetrievedKey) {
             method: "POST",
             json: true,
             body: {
-                _id: "lastRetrievedKeyUniqueId",
                 lastRetrievedKey: lastRetrievedKey
             }
         }, function(error, incomingMessage, response) {
