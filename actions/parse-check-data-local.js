@@ -119,8 +119,9 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
                 m_alreadyProcessedDocs++;
             }                            
         }}(m_filteredResults[i]));
-        m_alreadyCheckedDocs++;
     }
+    
+    m_alreadyCheckedDocs=+amountAtATime;
     
     if (m_alreadyCheckedDocs < m_filteredResults.length-1)
         setTimeout(function() { sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amountAtATime); }, 1000);
