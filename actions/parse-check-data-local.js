@@ -20,6 +20,7 @@ var fs = require('fs');
 var request = require('request');
     
 var m_currentCursorPosition = 0;
+var m_alreadyProcessedDocs = 0;
 var m_auditedImages = [];
 var m_ow;
 
@@ -70,7 +71,7 @@ function main(params) {
     }).then(function(lastTimestampMsRev) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs?include_docs=true";
         var lastTimestampMs = lastTimestampMsRev.lastTimestampMs;
-        if (lastTimestampMs > 0) lastTimestampMs = lastTimestampMs - 1000*60*2; //review what was done within the last 2 minute of the last processed timestamp, or after
+        if (lastTimestampMs > 0) lastTimestampMs = lastTimestampMs - 1000*60*10; //review what was done within the last 10 minutes of the last processed timestamp, or after
 
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
@@ -83,20 +84,39 @@ function main(params) {
                     //console.log(url);
                     var results = JSON.parse(body).rows;
                     console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs);
-                    var filteredResults = results.filter(function(result) { return result.doc.timestamp >= lastTimestampMs; });                    
-                    console.log("FILTERED Documents Found: " + filteredResults.length + " records.");
-                    m_auditedImages = filteredResults;
+                    var filteredResults = results.filter(function(result) { return result.doc.timestamp >= lastTimestampMs; }); 
+                    console.log("FILTERED (by timestamp) Documents Found: " + filteredResults.length + " records.");
                     m_currentCursorPosition = 0;
-                    return continueProcessingImages(params);
+                    m_auditedImages = [];
+                    m_alreadyProcessedDocs = 0;
+                    
+                    var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/";
+                    filteredResults.forEach(function(result) {
+                        var urlLocal = urlBase + result.id;
+                        request.get(url, function(error, response, body) {
+                            console.log("Returning from individual doc query:", error, response, body);
+                            if (response.statusCode == 404) {
+                                m_auditedImages.push(result);
+                                if (m_auditedImages.length + m_alreadyProcessedDocs === filteredResults.length) {
+                                    console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
+                                    continueProcessingImages(params, resolve);
+                                }
+                            } else if (error) {
+                                reject(error);
+                            } else {
+                                m_alreadyProcessedDocs++;
+                            }                            
+                        });
+                    });
                 }
             });
         });
     });
 }
 
-function continueProcessingImages(params) {
+function continueProcessingImages(params, resolve) {
     var result = m_auditedImages[m_currentCursorPosition];
-    if (!result) return Promise.resolve({done: true});
+    if (!result) resolve({done: true});
     
     //if (m_currentCursorPosition===0) console.log("First result document is ", result);
     m_currentCursorPosition++;
@@ -144,7 +164,7 @@ function continueProcessingImages(params) {
                         }
                     }}(result.timestamp)
                 ).then(function() {
-                    return continueProcessingImages(params);
+                    return continueProcessingImages(params, resolve);
                 });
         } else {
             return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
@@ -158,7 +178,7 @@ function continueProcessingImages(params) {
                         }
                     }}(result.timestamp)
                 ).then(function() {
-                    return continueProcessingImages(params);
+                    return continueProcessingImages(params, resolve);
                 });
         }
     }}(id), function(reason) {
