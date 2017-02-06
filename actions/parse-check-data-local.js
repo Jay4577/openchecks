@@ -93,6 +93,7 @@ function main(params) {
                     var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/";
                     filteredResults.forEach(function(result) {
                         var urlLocal = urlBase + result.id;
+                        console.log(urlLocal);
                         request.get(urlLocal, function(error, response, body) {
                             console.log("Returning from individual doc query:", error, response, body);
                             if (response.statusCode == 404) {
