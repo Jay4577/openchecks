@@ -140,7 +140,7 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject) {
 
 function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
-    if (!result) resolve({done: true});
+    if (!result) return resolve({done: true});
     
     //if (m_currentCursorPosition===0) console.log("First result document is ", result);
     m_currentCursorPosition++;
