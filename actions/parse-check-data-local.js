@@ -70,7 +70,7 @@ function main(params) {
     }).then(function(lastTimestampMsRev) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs?include_docs=true";
         var lastTimestampMs = lastTimestampMsRev.lastTimestampMs;
-        if (lastTimestampMs > 0) lastTimestampMs = lastTimestampMs - 1000*60; //review what was done within the last minute of the last processed timestamp, or after
+        if (lastTimestampMs > 0) lastTimestampMs = lastTimestampMs - 1000*60*2; //review what was done within the last 2 minute of the last processed timestamp, or after
 
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
