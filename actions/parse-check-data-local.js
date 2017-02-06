@@ -118,11 +118,11 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
                 console.log(error);
                 reject(error);
             } else {
-                console.log("Existing id:", result.id);
+                //console.log("Existing id:", result.id);
                 m_alreadyProcessedDocs++;
                 if (m_auditedImages.length + m_alreadyProcessedDocs === m_filteredResults.length) {
-                    console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
                     if (m_auditedImages.length > 0) {
+                        console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
                         continueProcessingImages(params, resolve, reject);
                     } else {
                         resolve({done: true});
