@@ -53,7 +53,7 @@ function main(params) {
                 reject(error);
             } else {
                 var result = JSON.parse(body);
-                var rowsAmount = result.total_rows;
+                var rowsAmount = result.rows.length;
 
                 var lastRetrievedKey, rev;
                 if (rowsAmount !== 0) {
@@ -125,9 +125,10 @@ function continueProcessingImages(params) {
       blocking: true
     }).then(function(idAudited) { return function(ocrResult) {
         var result = ocrResult.response.result.result;
-        console.log("OCR Result:", result);
+        console.log("OCR Call Succeeded.");
+        //console.log("OCR Result:", result);
         var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
-        console.log('Plain text: ' + plainMicrCheckText);
+        //console.log('Plain text: ' + plainMicrCheckText);
 
         var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
         if (bankingInfo.invalid()) {      
@@ -153,7 +154,7 @@ function continueProcessingImages(params) {
         }
     }}(id), function(reason) {
         console.log("OCR Call failed.", reason);
-        return new Promise().reject(reason);
+        return Promise.reject(reason);
     });
 }
 
@@ -197,7 +198,10 @@ function insertRejectedCheckInfo(params, idParsedRecord, email, toAccount, amoun
                 timestamp: timestamp
             }
         }, function(error, incomingMessage, response) {
-            if (error && incomingMessage.statusCode != 409) {
+            if (incomingMessage.statusCode == 409) {
+                console.log("Rejected Record already existed:", idParsedRecord);
+                resolve(response);
+            } else if (error) {
                 console.log("Creation of rejected record failed:", idParsedRecord, error);
                 reject(error);
             } else {
@@ -231,7 +235,10 @@ function insertProcessedCheckInfo(params, bankingInfo, idParsedRecord, email, to
                 timestamp: timestamp
             }
         }, function(error, incomingMessage, response) {
-            if (error && incomingMessage.statusCode != 409) {
+            if (incomingMessage.statusCode == 409) {
+                console.log("Processed already existed:", idParsedRecord);
+                resolve(response);
+            } else if (error) {
                 console.log("Creation of processed record failed:", idParsedRecord, error);
                 reject(error);
             } else {
