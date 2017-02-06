@@ -173,7 +173,8 @@ function main(params) {
         attachmentName: attachmentName,
         email: email,
         toAccount: toAccount,
-        amount: amount
+        amount: amount,
+        timestamp: (new Date()).getTime()
       }, [{
           name: attachmentName,
           data: data,

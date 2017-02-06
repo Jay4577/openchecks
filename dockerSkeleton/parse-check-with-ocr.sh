@@ -22,6 +22,7 @@ EMAIL=`cat imgInfo | jq -r '.email'`
 TOACCOUNT=`cat imgInfo | jq -r '.toAccount'`
 AMOUNT=`cat imgInfo | jq -r '.amount'`
 ATTACHMENT_NAME=`cat imgInfo | jq -r '.attachmentName'`
+TIMESTAMP=`cat imgInfo | jq -r '.timestamp'`
 
 # Download the image from Cloudant.
 echo "Getting actual image attachment from cloudant..."
@@ -41,7 +42,7 @@ PLAINTEXT=`cat imgData.txt.txt | base64`
 PLAINTEXT=`echo "$PLAINTEXT" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/ /g'`
 
 # Return JSON formatted values.
-echo "{ \"result\": {\"email\": \"$EMAIL\",\"toAccount\": \"$TOACCOUNT\",\"amount\": \"$AMOUNT\", \"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\", \"plaintext\": \"$PLAINTEXT\", \"attachmentname\": \"$ATTACHMENT_NAME\" } }"
+echo "{ \"result\": {\"email\": \"$EMAIL\",\"timestamp\": \"$TIMESTAMP\",\"toAccount\": \"$TOACCOUNT\",\"amount\": \"$AMOUNT\", \"routing\": \"$ROUTING\", \"account\": \"$ACCOUNT\", \"plaintext\": \"$PLAINTEXT\", \"attachmentname\": \"$ATTACHMENT_NAME\" } }"
 
 
 

@@ -55,22 +55,22 @@ function main(params) {
                 var result = JSON.parse(body);
                 var rowsAmount = result.rows.length;
 
-                var lastRetrievedKey, rev;
+                var lastTimestampMs, rev;
                 if (rowsAmount !== 0) {
-                    lastRetrievedKey = result.rows[0].doc.lastRetrievedKey;
+                    lastTimestampMs = result.rows[0].doc.lastTimestampMs;
                     rev = 0;
                 } else {
-                    lastRetrievedKey = 0;
+                    lastTimestampMs = 0;
                     rev = 0;
                 }
-                console.log("lastRetrievedKey: " + lastRetrievedKey);
-                resolve( { lastRetrievedKey: lastRetrievedKey, _rev: rev} );
+                console.log("lastTimestampMs: " + lastTimestampMs);
+                resolve( { lastTimestampMs: lastTimestampMs, _rev: rev} );
             }
         });
-    }).then(function(lastRetrievedKeyRev) {
+    }).then(function(lastTimestampMsRev) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_all_docs";
-        var lastRetrievedKey = lastRetrievedKeyRev.lastRetrievedKey;
-        if (lastRetrievedKey) url += "?startkey=\"" + lastRetrievedKey +  "\"";//well there's something to fix: last key has always been processed already
+        var lastTimestampMs = lastTimestampMsRev.lastTimestampMs;
+        if (lastTimestampMs > 0) lastTimestampMs = lastTimestampMs - 1000*60*2; //review what was done within the last 2 minutes of the last processed timestamp, or after
 
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
@@ -82,8 +82,10 @@ function main(params) {
                     //console.log(JSON.parse(body));
                     //console.log(url);
                     var results = JSON.parse(body).rows;
-                    console.log("Documents Found: " + results.length + " records.");
-                    m_auditedImages = results;
+                    console.log("TOTAL Documents Found: " + results.length + " records.");
+                    var filteredResults = results.filter(function(doc) { return doc.timestamp >= lastTimestampMs; });                    
+                    console.log("FILTERED Documents Found: " + filteredResults.length + " records.");
+                    m_auditedImages = filteredResults;
                     m_currentCursorPosition = 0;
                     return continueProcessingImages(params);
                 }
@@ -135,28 +137,28 @@ function continueProcessingImages(params) {
         if (bankingInfo.invalid()) {      
             return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
                 .then(
-                    function(key) { return function(updateKey) {
+                    function(ts) { return function(updateKey) {
                         if (updateKey) {
-                            console.log("Last Processed Key is now: ", key);
-                            return updateLastRetrievedKey(params, key); //acceptable race condition
+                            console.log("Last Processed Timestamp is now: ", ts);
+                            return updateLastRetrievedTimestampMs(params, ts); //acceptable race condition
                         } else {
                             return Promise.resolve(true);
                         }
-                    }}(key)
+                    }}(result.timestamp)
                 ).then(function() {
                     return continueProcessingImages(params);
                 });
         } else {
             return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
                 .then(
-                    function(key) { return function(updateKey) {
+                    function(ts) { return function(updateKey) {
                         if (updateKey) {
-                            console.log("Last Processed Key is now: ", key);
-                            return updateLastRetrievedKey(params, key); //acceptable race condition
+                            console.log("Last Processed Timestamp is now: ", ts);
+                            return updateLastRetrievedTimestampMs(params, ts); //acceptable race condition
                         } else {
                             return Promise.resolve(true);
                         }
-                    }}(key)
+                    }}(result.timestamp)
                 ).then(function() {
                     return continueProcessingImages(params);
                 });
@@ -168,7 +170,7 @@ function continueProcessingImages(params) {
 }
 
 //it´s in fact an insert
-function updateLastRetrievedKey(params, lastRetrievedKey) {
+function updateLastRetrievedTimestampMs(params, lastRetrievedTimestampMs) {
     return new Promise(function(resolve, reject) {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE;
         request({
@@ -176,11 +178,11 @@ function updateLastRetrievedKey(params, lastRetrievedKey) {
             method: "POST",
             json: true,
             body: {
-                lastRetrievedKey: lastRetrievedKey
+                lastTimestampMs: lastRetrievedTimestampMs
             }
         }, function(error, incomingMessage, response) {
-            if (error && incomingMessage.statusCode != 409) {
-                console.log("Update of lastRetrievedKey failed:", lastRetrievedKey, error);
+            if (error) {
+                console.log("Update of lastTimestampMs failed:", lastTimestampMs, error);
                 reject(error);
             } else {
                 resolve(response);
