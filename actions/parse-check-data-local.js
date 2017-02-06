@@ -78,6 +78,8 @@ function main(params) {
                     console.log("Retrieving 'all' documents failed...", error);
                     reject(error);
                 } else {
+                    console.log(JSON.parse(body));
+                    console.log(url);
                     var results = JSON.parse(body).rows;
                     console.log("Documents Found: " + results.length + " records.");
                     m_auditedImages = results;
