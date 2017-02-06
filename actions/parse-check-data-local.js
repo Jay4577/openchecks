@@ -82,7 +82,7 @@ function main(params) {
                     //console.log(JSON.parse(body));
                     //console.log(url);
                     var results = JSON.parse(body).rows;
-                    console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs);
+                    console.log("TOTAL Documents Found: " + results.length + " records - last ts = ", lastTimestampMs, results);
                     var filteredResults = results.filter(function(doc) { return doc.timestamp >= lastTimestampMs; });                    
                     console.log("FILTERED Documents Found: " + filteredResults.length + " records.");
                     m_auditedImages = filteredResults;
