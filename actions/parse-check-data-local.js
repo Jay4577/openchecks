@@ -21,9 +21,11 @@ var request = require('request');
     
 var m_currentCursorPosition = 0;
 var m_alreadyProcessedDocs = 0;
-var m_alreadyCheckedDocs = 0;
+var m_alreadyCheckedProcessedDocs = 0;
+var m_alreadyCheckedRejectedDocs = 0;
 var m_auditedImages = [];
 var m_filteredResults = [];
+var m_docsToCheckAgainstRejectedDb = [];
 var m_ow;
 
 /**
@@ -91,8 +93,10 @@ function main(params) {
                     console.log("FILTERED (by timestamp) Documents Found: " + m_filteredResults.length + " records.");
                     m_currentCursorPosition = 0;
                     m_auditedImages = [];
+                    m_docsToCheckAgainstRejectedDb = [];
                     m_alreadyProcessedDocs = 0;
-                    m_alreadyCheckedDocs = 0;
+                    m_alreadyCheckedProcessedDocs = 0;
+                    m_alreadyCheckedRejectedDocs = 0;
                     sendGetRequestsToVerifyDocumentExistence(params, resolve, reject);
                 }
             });
@@ -103,7 +107,7 @@ function main(params) {
 function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject) {
     var urlBase = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_PARSED_DATABASE + "/";
     
-    for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+params.REQUESTS_PER_SECONDS, m_filteredResults.length); i++) {
+    for(var i=m_alreadyCheckedProcessedDocs; i<Math.min(m_alreadyCheckedProcessedDocs+params.REQUESTS_PER_SECONDS, m_filteredResults.length); i++) {
         var urlLocal = urlBase + m_filteredResults[i].id;
         //console.log("About to query id:", m_filteredResults[i].id);
         request.get(urlLocal, function(result) { return function(error, response, body) {
@@ -132,10 +136,13 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject) {
         }}(m_filteredResults[i]));
     }
     
-    m_alreadyCheckedDocs+=params.REQUESTS_PER_SECONDS;
+    m_alreadyCheckedProcessedDocs+=params.REQUESTS_PER_SECONDS;
     
-    if (m_alreadyCheckedDocs < m_filteredResults.length-1)
+    if (m_alreadyCheckedProcessedDocs < m_filteredResults.length-1) {
         setTimeout(function() { sendGetRequestsToVerifyDocumentExistence(params, resolve, reject); }, 1000);
+    } else {
+        setTimeout(function() { sendGetRequestsToVerifyDocumentExistence(params, resolve, reject); }, 1000);
+    }
 }
 
 function continueProcessingImages(params, resolve, reject) {
@@ -238,7 +245,7 @@ function insertRejectedCheckInfo(params, idParsedRecord, email, toAccount, amoun
         var timestamp = parseInt((new Date).getTime() / 1000, 10);    
         console.log('Inserting in REJECTEDDB, id ' + idParsedRecord + ", amount = " + amount);
 
-        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_REJECTED_DATABASE;
+        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_PARSED_DATABASE;
         request({
             uri: url,
             method: "POST",
@@ -246,6 +253,8 @@ function insertRejectedCheckInfo(params, idParsedRecord, email, toAccount, amoun
             body: {
                 _id: idParsedRecord,
                 toAccount: toAccount,
+                fromAccount: -1,
+                routingNumber: -1,
                 email: email,
                 amount: amount,
                 timestamp: timestamp
