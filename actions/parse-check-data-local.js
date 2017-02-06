@@ -104,6 +104,7 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
     
     for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+amountAtATime, m_filteredResults.length); i++) {
         var urlLocal = urlBase + m_filteredResults[i].id;
+        console.log("About to query id:", m_filteredResults[i].id);
         request.get(urlLocal, function(result) { return function(error, response, body) {
             console.log("Returning from individual doc query:", error, response, body);
             if (response.statusCode == 404) {
