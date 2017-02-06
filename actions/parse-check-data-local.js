@@ -104,18 +104,21 @@ function sendGetRequestsToVerifyDocumentExistence(params, resolve, reject, amoun
     
     for(var i=m_alreadyCheckedDocs; i<Math.min(m_alreadyCheckedDocs+amountAtATime, m_filteredResults.length); i++) {
         var urlLocal = urlBase + m_filteredResults[i].id;
-        console.log("About to query id:", m_filteredResults[i].id);
+        //console.log("About to query id:", m_filteredResults[i].id);
         request.get(urlLocal, function(result) { return function(error, response, body) {
-            console.log("Returning from individual doc query:", error, response, body);
+            console.log("Returning from individual doc query:");
             if (response.statusCode == 404) {
+                console.log("Found id!", result.id);
                 m_auditedImages.push(result);
                 if (m_auditedImages.length + m_alreadyProcessedDocs === m_filteredResults.length) {
                     console.log("FILTERED (by existing) Documents Found: " + m_auditedImages.length + " records.");
                     continueProcessingImages(params, resolve, reject);
                 }
             } else if (error) {
+                console.log(error);
                 reject(error);
             } else {
+                console.log("Existing id:", result.id);
                 m_alreadyProcessedDocs++;
             }                            
         }}(m_filteredResults[i]));
