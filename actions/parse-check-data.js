@@ -93,21 +93,23 @@ function main(params) {
           rejectedDb.insert({
             _id: params._id,
             toAccount: toAccount,
+            fromAccount: -1,
+            routingNumber: -1,
             email: email,
             amount: amount,
             timestamp: timestamp
           },
-                  function (err, body, head) {
-                    if (err) {
-                      console.log('[parse-check-data.main] error: parsedDb');
-                      console.log(err);
-                      return callback(err);
-                    } else {
-                      console.log('[parse-check-data.main] success: parsedDb');
-                      console.log(body);
-                      return callback(null);
-                    }
-                  }
+            function (err, body, head) {
+              if (err) {
+                console.log('[parse-check-data.main] error: rejectedDb');
+                console.log(err);
+                return callback(err);
+              } else {
+                console.log('[parse-check-data.main] success: rejectedDb');
+                console.log(body);
+                return callback(null);
+              }
+            }
           );
         } else {
           fromAccount = bankingInfo.accountNumber;
