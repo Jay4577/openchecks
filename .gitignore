@@ -5,7 +5,9 @@ vendor
 *npm-debug.log
 docs/PRIVATE-NOTES.md
 local.env
-PoC.docx
+recreate-triggers.cmd
 
 /openchecks-front/nbproject/private/
 /actions/nbproject/private/
+/actions/*.cmd
+/actions/*.log
