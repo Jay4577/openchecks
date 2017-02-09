@@ -20,6 +20,7 @@ var fs = require('fs');
 var request = require('request');
     
 var m_currentCursorPosition = 0;
+var m_currentSequenceNumberProcessedInThisBatch = 0;
 var m_lastSequenceNumberProcessedInThisBatch = 0;
 var m_lastSequenceIdProcessedInThisBatch = 0;
 var m_auditedImages = [];
@@ -70,7 +71,7 @@ function main(params) {
     }).then(function(lastSequenceIdentifierResponse) {
         var lastSequenceIdentifier = lastSequenceIdentifierResponse.lastSequenceIdentifier;
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_changes?include_docs=true";
-        if (lastSequenceIdentifier > 0) url = url + "&_since=" + lastSequenceIdentifier;
+        if (lastSequenceIdentifier > 0) url = url + "&since=" + lastSequenceIdentifier;
 
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
@@ -98,7 +99,7 @@ function main(params) {
 
 function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
-    if (m_lastSequenceNumberProcessedInThisBatch !== 0) {
+    if (m_lastSequenceNumberProcessedInThisBatch !== 0 && m_currentSequenceNumberProcessedInThisBatch !== m_lastSequenceNumberProcessedInThisBatch) {
         var p = updateLastRetrievedSequenceId(params, reject);
         if (!result) return p.then(function() { resolve({done: true}); });
     } else {
@@ -115,6 +116,7 @@ function continueProcessingImages(params, resolve, reject) {
         var id = result.id;
         var sequenceNumber = result.seq[0];
         var sequenceId = result.seq[1];
+        m_currentSequenceNumberProcessedInThisBatch = sequenceNumber;
         if (!m_ow) {
             var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
             //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
