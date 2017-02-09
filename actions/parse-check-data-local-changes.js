@@ -99,7 +99,9 @@ function main(params) {
 
 function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
-    if (m_lastSequenceNumberProcessedInThisBatch !== 0 && m_currentSequenceNumberProcessedInThisBatch !== m_lastSequenceNumberProcessedInThisBatch) {
+    if (m_lastSequenceNumberProcessedInThisBatch !== 0 && 
+            (m_currentSequenceNumberProcessedInThisBatch !== m_lastSequenceNumberProcessedInThisBatch) 
+            || m_currentSequenceNumberProcessedInThisBatch === 0) {
         var p = updateLastRetrievedSequenceId(params, reject);
         if (!result) return p.then(function() { resolve({done: true}); });
     } else {
