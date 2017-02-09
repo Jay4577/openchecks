@@ -64,10 +64,11 @@ function main(params) {
                     lastSequenceIdentifier = 0;
                 }
                 console.log("lastSequenceIdentifier: " + lastSequenceIdentifier);
-                resolve( lastSequenceIdentifier );
+                resolve( { lastSequenceIdentifier: lastSequenceIdentifier } );
             }
         });
-    }).then(function(lastSequenceIdentifier) {
+    }).then(function(lastSequenceIdentifierResponse) {
+        var lastSequenceIdentifier = lastSequenceIdentifierResponse.lastSequenceIdentifier;
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_changes?include_docs=true";
         if (lastSequenceIdentifier > 0) url = url + "&_since=" + lastSequenceIdentifier;
 
