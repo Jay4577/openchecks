@@ -137,12 +137,10 @@ function continueProcessingImages(params, resolve, reject) {
         if (bankingInfo.invalid()) {      
             return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
                 .then(
-                    function(sequenceNumber, sequenceId) { return function(updateKey) {
-                        if (updateKey) {
-                            if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
-                                m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
-                                m_lastSequenceIdProcessedInThisBatch = sequenceId;
-                            }
+                    function(sequenceNumber, sequenceId) { return function() {
+                        if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
+                            m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
+                            m_lastSequenceIdProcessedInThisBatch = sequenceId;
                         }
                         
                         return continueProcessingImages(params, resolve, reject);
@@ -151,12 +149,10 @@ function continueProcessingImages(params, resolve, reject) {
         } else {
             return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
                 .then(
-                    function(sequenceNumber, sequenceId) { return function(updateKey) {
-                        if (updateKey) {
-                            if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
-                                m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
-                                m_lastSequenceIdProcessedInThisBatch = sequenceId;
-                            }
+                    function(sequenceNumber, sequenceId) { return function() {
+                        if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
+                            m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
+                            m_lastSequenceIdProcessedInThisBatch = sequenceId;
                         }
                         
                         return continueProcessingImages(params, resolve, reject);
@@ -211,7 +207,7 @@ function insertRejectedCheckInfo(params, idParsedRecord, email, toAccount, amoun
         }, function(error, incomingMessage, response) {
             if (incomingMessage.statusCode == 409) {
                 console.log("Rejected Record already existed:", idParsedRecord);
-                resolve(false);
+                resolve(response);
             } else if (error) {
                 console.log("Creation of rejected record failed:", idParsedRecord, error);
                 reject(error);
@@ -247,8 +243,8 @@ function insertProcessedCheckInfo(params, bankingInfo, idParsedRecord, email, to
             }
         }, function(error, incomingMessage, response) {
             if (incomingMessage.statusCode == 409) {
-                console.log("Processed already existed:", idParsedRecord);
-                resolve(false);
+                console.log("Processed record already existed:", idParsedRecord);
+                resolve(response);
             } else if (error) {
                 console.log("Creation of processed record failed:", idParsedRecord, error);
                 reject(error);
