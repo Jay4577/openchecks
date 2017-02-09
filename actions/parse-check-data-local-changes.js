@@ -43,7 +43,6 @@ var m_ow;
  * @param   params.CLOUDANT_PARSED_DATABASE   Cloudant database to store the parsed check data to
  * @param   params.CLOUDANT_REJECTED_DATABASE Cloudant database to store the rejected check data to
  * @param   params.CURRENT_NAMESPACE          The current namespace so we can call the OCR action by name
- * @param   params.REQUESTS_PER_SECONDS       request.get fails when too many requests per second (ulimits?) - setting it to 15 seems to work
  * @return                                    Standard OpenWhisk success/error response
  */
 function main(params) {
