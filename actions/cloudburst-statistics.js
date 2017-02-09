@@ -32,18 +32,18 @@ var request = require('request');
  */
 function main(params) {
     console.log(params);
-    //params.rows contains all documents from the processed db on premises. We will build some dummy statistics 
+    //params.dbContent.rows contains all documents from the processed db on premises. We will build some dummy statistics 
     //in this procedure to simulate some sort of cpu operation that would justify cloud bursting.
 
-    console.log("Entering statistics calculator. Documents Found: " + params.rows.length);
-    var totalCheques = params.rows.length;
+    console.log("Entering statistics calculator. Documents Found: " + params.dbContent.rows.length);
+    var totalCheques = params.dbContent.rows.length;
     var totalRejected = 0;
     var totalAccepted = 0;
     var totalAmount = 0;
     var totalAmountAccepted = 0;
     var totalAmountRejected = 0;
     
-    params.rows.forEach(function(processedDocument) {
+    params.dbContent.rows.forEach(function(processedDocument) {
         var doc = processedDocument.doc;
         if (typeof(fromAccount) !== "undefined" && fromAccount !== -1) {
             totalAccepted++;

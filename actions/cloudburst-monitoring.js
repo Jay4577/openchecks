@@ -65,7 +65,7 @@ function main(params) {
                     uri: targetOwProcessEndPoint,
                     method: "POST",
                     json: true,
-                    body: body
+                    body: { dbContent: body }
                 }, function(error, incomingMessage, response) {
                     if (error) {
                         console.log("Failed forwarding processed database content.", error, targetOwProcessEndPoint);
