@@ -74,7 +74,8 @@ function main(params) {
 
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
-                //console.log("Request to get all docs returned: ",JSON.parse(body));
+                //console.log("Request to get all docs returned: ");
+                //console.log(JSON.parse(body));
                 if (error) {
                     console.log("Retrieving 'changed' audited documents failed...", error);
                     reject(error);
@@ -82,7 +83,7 @@ function main(params) {
                     //console.log(JSON.parse(body));
                     //console.log(url);
                     var body = JSON.parse(body);
-                    var results = JSON.parse(body).results;
+                    var results = body.results;
                     
                     console.log("TOTAL Documents Found: " + results.length + " records - last seq = ", lastSequenceIdentifier);
                     m_currentCursorPosition = 0;
