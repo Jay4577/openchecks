@@ -20,6 +20,7 @@ var fs = require('fs');
 var request = require('request');
     
 var m_currentCursorPosition = 0;
+var m_lastSequenceNumberProcessedInThisBatch = 0;
 var m_lastSequenceIdProcessedInThisBatch = 0;
 var m_auditedImages = [];
 var m_ow;
@@ -80,10 +81,9 @@ function main(params) {
                     //console.log(JSON.parse(body));
                     //console.log(url);
                     var body = JSON.parse(body);
-                    var results = body.results;
-                    m_lastSequenceIdProcessedInThisBatch = body.last_seq[1];
+                    var results = JSON.parse(body).results;
                     
-                    console.log("TOTAL Documents Found: " + results.length + " records - new last seq = ", m_lastSequenceIdProcessedInThisBatch);
+                    console.log("TOTAL Documents Found: " + results.length + " records - last seq = ", lastSequenceIdentifier);
                     m_currentCursorPosition = 0;
                     m_auditedImages = results;
                     continueProcessingImages(params, resolve, reject);
@@ -96,9 +96,11 @@ function main(params) {
 
 function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
-    if (!result) {
-        if (m_lastSequenceIdProcessedInThisBatch !== 0) return updateLastRetrievedSequenceId(params, resolve, reject);
-        return resolve({done: true});
+    if (m_lastSequenceNumberProcessedInThisBatch !== 0) {
+        var p = updateLastRetrievedSequenceId(params, reject);
+        if (!result) return p.then(function() { resolve({done: true}); });
+    } else {
+        if (!result) return resolve({done: true});
     }
     
     //if (m_currentCursorPosition===0) console.log("First result document is ", result);
@@ -109,6 +111,8 @@ function continueProcessingImages(params, resolve, reject) {
         return continueProcessingImages(params, resolve, reject);
     } else {
         var id = result.id;
+        var sequenceNumber = result.seq[0];
+        var sequenceId = result.seq[1];
         if (!m_ow) {
             var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
             //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
@@ -138,10 +142,28 @@ function continueProcessingImages(params, resolve, reject) {
             var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
             if (bankingInfo.invalid()) {      
                 return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
-                    .then(function() { return continueProcessingImages(params, resolve, reject); });
+                    .then(
+                        function(sequenceNumber, sequenceId) { return function() {
+                            if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
+                                m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
+                                m_lastSequenceIdProcessedInThisBatch = sequenceId;
+                            }
+
+                            return continueProcessingImages(params, resolve, reject);
+                        }}(sequenceNumber, sequenceId)
+                    );
             } else {
                 return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
-                    .then(function() { return continueProcessingImages(params, resolve, reject); });
+                    .then(
+                        function(sequenceNumber, sequenceId) { return function() {
+                            if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
+                                m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
+                                m_lastSequenceIdProcessedInThisBatch = sequenceId;
+                            }
+
+                            return continueProcessingImages(params, resolve, reject);
+                        }}(sequenceNumber, sequenceId)
+                    );
             }
         }}(id), function(reason) {
             console.log("OCR Call failed.", reason);
@@ -151,22 +173,23 @@ function continueProcessingImages(params, resolve, reject) {
 }
 
 //it´s in fact an insert
-function updateLastRetrievedSequenceId(params, resolve, reject) {
-    var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE;
-    request({
-        uri: url,
-        method: "POST",
-        json: true,
-        body: {
-            lastSequenceIdentifier: m_lastSequenceIdProcessedInThisBatch
-        }
-    }, function(error, incomingMessage, response) {
-        if (error) {
-            console.log("Update of lastSequenceId failed:", m_lastSequenceIdProcessedInThisBatch, error);
-            reject(error);
-        } else {
-            resolve(response);
-        }
+function updateLastRetrievedSequenceId(params, reject) {
+    var bibi = m_lastSequenceIdProcessedInThisBatch;
+    return new Promise(function() {
+        var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE;
+        request({
+            uri: url,
+            method: "POST",
+            json: true,
+            body: {
+                lastSequenceIdentifier: bibi
+            }
+        }, function(error, incomingMessage, response) {
+            if (error) {
+                console.log("Update of lastSequenceId failed:", bibi, error);
+                reject(error);
+            }
+        });
     });
 }
 
