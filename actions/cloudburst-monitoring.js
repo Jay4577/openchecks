@@ -33,6 +33,10 @@ var endpoints = [
  *
  * @param   params.CLOUDANT_LOCAL_HOST        host:port of the http cloudant database for the LOCAL cloudant
  * @param   params.CLOUDANT_PROCESSED_DATABASE   Cloudant database to store the processed check data to
+ * @param   params.OW_LOCAL_AUTH        host:port of the LOCAL OW
+ * @param   params.OW_LOCAL_HOST        host:port of the LOCAL OW
+ * @param   params.OW_REMOTE_AUTH        host:port of the REMOTE OW
+ * @param   params.OW_REMOTE_HOST        host:port of the REMOTE OW
  * @return                                    Promise
  */
 function main(params) {
@@ -55,7 +59,7 @@ function main(params) {
                 var body = JSON.parse(body);
 
                 console.log("TOTAL Documents Found: " + body.total_rows);
-                var targetOwProcessEndPoint = pickAnOpenWhiskEndPointOhYeahBabe();
+                var targetOwProcessEndPoint = pickAnOpenWhiskEndPointOhYeahBabe(params);
                 console.log("Calling endpoint:", targetOwProcessEndPoint);
                 request({
                     uri: targetOwProcessEndPoint,
