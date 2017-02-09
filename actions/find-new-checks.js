@@ -36,7 +36,7 @@ var path = require('path');
 function main(params) {
   console.log("Retrieving file list");
 
-    //this
+
   // Configure object storage connection
   var os = new ObjectStorage(
           params.SWIFT_REGION_NAME,
