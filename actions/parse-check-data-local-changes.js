@@ -100,8 +100,8 @@ function main(params) {
 function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
     if (m_lastSequenceNumberProcessedInThisBatch !== 0 && 
-            (m_currentSequenceNumberProcessedInThisBatch !== m_lastSequenceNumberProcessedInThisBatch) 
-            || m_currentSequenceNumberProcessedInThisBatch === 0) {
+            ((m_currentSequenceNumberProcessedInThisBatch !== m_lastSequenceNumberProcessedInThisBatch) 
+            || m_currentSequenceNumberProcessedInThisBatch === 0)) {
         var p = updateLastRetrievedSequenceId(params, reject);
         if (!result) return p.then(function() { resolve({done: true}); });
     } else {
@@ -180,7 +180,8 @@ function continueProcessingImages(params, resolve, reject) {
 
 //it´s in fact an insert
 function updateLastRetrievedSequenceId(params, reject) {
-    var bibi = m_lastSequenceIdProcessedInThisBatch;
+    var id = m_lastSequenceIdProcessedInThisBatch;
+    var num = m_lastSequenceNumberProcessedInThisBatch;
     return new Promise(function() {
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_LAST_SEQUENCE_DATABASE;
         request({
@@ -188,11 +189,12 @@ function updateLastRetrievedSequenceId(params, reject) {
             method: "POST",
             json: true,
             body: {
-                lastSequenceIdentifier: bibi
+                lastSequenceIdentifier: id,
+                lastSequenceNumber: num
             }
         }, function(error, incomingMessage, response) {
             if (error) {
-                console.log("Update of lastSequenceId failed:", bibi, error);
+                console.log("Update of lastSequenceId failed:", id, error);
                 reject(error);
             }
         });
