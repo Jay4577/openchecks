@@ -86,7 +86,7 @@ function main(params) {
                     var body = JSON.parse(body);
                     var results = body.results;
                     
-                    console.log("TOTAL Documents Found: " + results.length + " records - last seq = ", lastSequenceIdentifier);
+                    console.log("TOTAL Documents Found: " + results.length + " records - last seq = ", lastSequenceIdentifier, ", last seq in this incoming batch:", body.last_seq);
                     m_currentCursorPosition = 0;
                     m_auditedImages = results;
                     continueProcessingImages(params, resolve, reject);
@@ -112,12 +112,16 @@ function continueProcessingImages(params, resolve, reject) {
     m_currentCursorPosition++;
     
     var deleted = result.deleted;
+    var sequenceNumber = result.seq[0];
+    var sequenceId = result.seq[1];
     if (deleted) {
+        if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
+            m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
+            m_lastSequenceIdProcessedInThisBatch = sequenceId;
+        }
         return continueProcessingImages(params, resolve, reject);
     } else {
         var id = result.id;
-        var sequenceNumber = result.seq[0];
-        var sequenceId = result.seq[1];
         if (!m_ow) {
             var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
             //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
