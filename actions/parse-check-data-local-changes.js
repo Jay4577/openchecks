@@ -118,7 +118,6 @@ function continueProcessingImages(params, resolve, reject) {
         var id = result.id;
         var sequenceNumber = result.seq[0];
         var sequenceId = result.seq[1];
-        m_currentSequenceNumberProcessedInThisBatch = sequenceNumber;
         if (!m_ow) {
             var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
             //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
@@ -180,6 +179,7 @@ function continueProcessingImages(params, resolve, reject) {
 
 //it´s in fact an insert
 function updateLastRetrievedSequenceId(params, reject) {
+    m_currentSequenceNumberProcessedInThisBatch = m_lastSequenceNumberProcessedInThisBatch;
     var id = m_lastSequenceIdProcessedInThisBatch;
     var num = m_lastSequenceNumberProcessedInThisBatch;
     return new Promise(function() {
