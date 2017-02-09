@@ -20,7 +20,6 @@ var fs = require('fs');
 var request = require('request');
     
 var m_currentCursorPosition = 0;
-var m_lastSequenceNumberProcessedInThisBatch = 0;
 var m_lastSequenceIdProcessedInThisBatch = 0;
 var m_auditedImages = [];
 var m_ow;
@@ -80,8 +79,11 @@ function main(params) {
                 } else {
                     //console.log(JSON.parse(body));
                     //console.log(url);
-                    var results = JSON.parse(body).rows;
-                    console.log("TOTAL Documents Found: " + results.length + " records - last seq = ", lastSequenceIdentifier);
+                    var body = JSON.parse(body);
+                    var results = body.results;
+                    m_lastSequenceIdProcessedInThisBatch = body.last_seq[1];
+                    
+                    console.log("TOTAL Documents Found: " + results.length + " records - new last seq = ", m_lastSequenceIdProcessedInThisBatch);
                     m_currentCursorPosition = 0;
                     m_auditedImages = results;
                     continueProcessingImages(params, resolve, reject);
@@ -95,74 +97,57 @@ function main(params) {
 function continueProcessingImages(params, resolve, reject) {
     var result = m_auditedImages[m_currentCursorPosition];
     if (!result) {
-        if (m_lastSequenceNumberProcessedInThisBatch !== 0) return updateLastRetrievedSequenceId(params, resolve, reject);
+        if (m_lastSequenceIdProcessedInThisBatch !== 0) return updateLastRetrievedSequenceId(params, resolve, reject);
         return resolve({done: true});
     }
     
     //if (m_currentCursorPosition===0) console.log("First result document is ", result);
     m_currentCursorPosition++;
     
-    var id = result.id;
-    var sequenceNumber = result.seq[0];
-    var sequenceId = result.seq[1];
-    
-    if (!m_ow) {
-        var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
-        //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
-        var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
-        var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
-        var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
-        //console.log(owparams);
-        var m_ow = openwhisk(owparams);
-    }
-    
-    console.log("[" + m_currentCursorPosition + "] Calling OCR docker action for image id:", id);
-    return m_ow.actions.invoke({
-      actionName: "santander/parse-check-with-ocr",
-      params: {
-        CLOUDANT_HOST: params.CLOUDANT_HOST,
-        CLOUDANT_USER: params.CLOUDANT_USER,
-        CLOUDANT_PASS: params.CLOUDANT_PASS,
-        CLOUDANT_AUDITED_DATABASE: params.CLOUDANT_AUDITED_DATABASE,
-        IMAGE_ID: id,
-        ATTACHMENT_NAME: "att-" + id
-      },
-      blocking: true
-    }).then(function(idAudited) { return function(ocrResult) {
-        console.log("OCR Call Succeeded.");
-        var result = ocrResult.response.result.result;
-        var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
-
-        var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
-        if (bankingInfo.invalid()) {      
-            return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
-                .then(
-                    function(sequenceNumber, sequenceId) { return function() {
-                        if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
-                            m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
-                            m_lastSequenceIdProcessedInThisBatch = sequenceId;
-                        }
-                        
-                        return continueProcessingImages(params, resolve, reject);
-                    }}(sequenceNumber, sequenceId)
-                );
-        } else {
-            return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
-                .then(
-                    function(sequenceNumber, sequenceId) { return function() {
-                        if (sequenceNumber > m_lastSequenceNumberProcessedInThisBatch) {
-                            m_lastSequenceNumberProcessedInThisBatch = sequenceNumber;
-                            m_lastSequenceIdProcessedInThisBatch = sequenceId;
-                        }
-                        
-                        return continueProcessingImages(params, resolve, reject);
-                    }}(sequenceNumber, sequenceId)
-                );
+    var deleted = result.deleted;
+    if (deleted) {
+        return continueProcessingImages(params, resolve, reject);
+    } else {
+        var id = result.id;
+        if (!m_ow) {
+            var API_KEY = process.env.OW_API_KEY || process.env.__OW_API_KEY;
+            //var API_URL = process.env.OW_API_URL || process.env.__OW_API_URL;
+            var API_HOST = "172.17.0.1"; //process.env.OW_API_HOST || process.env.__OW_API_HOST;
+            var NAMESPACE = process.env.OW_NAMESPACE || process.env.__OW_NAMESPACE;
+            var owparams = {apihost: API_HOST, api_key: API_KEY, namespace: NAMESPACE, ignore_certs: true}
+            //console.log(owparams);
+            var m_ow = openwhisk(owparams);
         }
-    }}(id), function(reason) {
-        console.log("OCR Call failed.", reason);
-        reject(reason);
-    });
+        console.log("[" + m_currentCursorPosition + "] Calling OCR docker action for image id:", id);
+        return m_ow.actions.invoke({
+          actionName: "santander/parse-check-with-ocr",
+          params: {
+            CLOUDANT_HOST: params.CLOUDANT_HOST,
+            CLOUDANT_USER: params.CLOUDANT_USER,
+            CLOUDANT_PASS: params.CLOUDANT_PASS,
+            CLOUDANT_AUDITED_DATABASE: params.CLOUDANT_AUDITED_DATABASE,
+            IMAGE_ID: id,
+            ATTACHMENT_NAME: "att-" + id
+          },
+          blocking: true
+        }).then(function(idAudited) { return function(ocrResult) {
+            console.log("OCR Call Succeeded.");
+            var result = ocrResult.response.result.result;
+            var plainMicrCheckText = Buffer.from(result.plaintext, 'base64').toString("ascii");
+
+            var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
+            if (bankingInfo.invalid()) {      
+                return insertRejectedCheckInfo(params, idAudited, result.email, result.toAccount, result.amount)
+                    .then(function() { return continueProcessingImages(params, resolve, reject); });
+            } else {
+                return insertProcessedCheckInfo(params, bankingInfo, idAudited, result.email, result.toAccount, result.amount)
+                    .then(function() { return continueProcessingImages(params, resolve, reject); });
+            }
+        }}(id), function(reason) {
+            console.log("OCR Call failed.", reason);
+            reject(reason);
+        });
+    }
 }
 
 //it´s in fact an insert
