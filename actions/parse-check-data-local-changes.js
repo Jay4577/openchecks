@@ -71,8 +71,8 @@ function main(params) {
     }).then(function(lastSequenceIdentifierResponse) {
         var lastSequenceIdentifier = lastSequenceIdentifierResponse.lastSequenceIdentifier;
         var url = "http://" + params.CLOUDANT_HOST + "/" + params.CLOUDANT_AUDITED_DATABASE + "/_changes?include_docs=true";
-        if (lastSequenceIdentifier > 0) url = url + "&since=" + lastSequenceIdentifier;
-
+        if (lastSequenceIdentifier !== 0) url += "&since=" + lastSequenceIdentifier;
+        
         return new Promise(function(resolve, reject) {
             request.get(url, function(error, response, body) {
                 //console.log("Request to get all docs returned: ");
@@ -82,7 +82,7 @@ function main(params) {
                     reject(error);
                 } else {
                     //console.log(JSON.parse(body));
-                    //console.log(url);
+                    console.log(url);
                     var body = JSON.parse(body);
                     var results = body.results;
                     
