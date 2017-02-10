@@ -79,7 +79,8 @@ function main(params) {
             if (error) {
                 reject(error);
             } else {
-                console.log("Done! Timestamp ms was ", ts);
+                console.log(response);
+                console.log("Done! Timestamp ms was", ts);
                 resolve({ done: true });
             }
         });
