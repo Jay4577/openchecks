@@ -64,7 +64,7 @@ function main(params) {
                 //console.log("Calling endpoint:", targetOwProcessEndPoint);
                 console.log("Post Content size:", length);
                 request({
-                    'auth': {
+                    auth: {
                         'user': '23bc46b1-71f6-4ed5-8c54-816aa4f8c502',
                         'pass': '123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP'
                     },
