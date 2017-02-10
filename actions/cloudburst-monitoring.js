@@ -68,14 +68,14 @@ function main(params) {
                     method: "POST",
                     json: true,
                     body: {
-                        "key": "dbContent",
-                        "value": body
+                        "dbContent": body
                     }
                 }, function(error, incomingMessage, response) {
                     if (error) {
                         console.log("Failed forwarding processed database content.", error, targetOwProcessEndPoint);
                         reject(error);
                     } else {
+                        console.log(response);
                         resolve({ done: true });
                     }
                 });
