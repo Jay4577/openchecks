@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var openwhisk = require('openwhisk');
 var request = require('request');
 /**
  * This action is triggered by a new check image added to a CouchDB database.
@@ -72,7 +71,8 @@ function main(params) {
                 totalAmount: totalAmount,
                 totalAmountAccepted: totalAmountAccepted,
                 totalAmountRejected: totalAmountRejected,
-                timestampms: (new Date()).getTime()
+                timestampms: (new Date()).getTime(),
+                calculatedFromHost: process.env.OW_API_HOST || process.env.__OW_API_HOST
             }
         }, function(error, incomingMessage, response) {
             if (error) {
