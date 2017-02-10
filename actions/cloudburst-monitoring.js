@@ -56,11 +56,13 @@ function main(params) {
                 reject(error);
             } else {
                 //console.log(JSON.parse(body));
+                var length = body.length;
                 var body = JSON.parse(body);
 
                 console.log("TOTAL Documents Found: " + body.total_rows);
                 var targetOwProcessEndPoint = pickAnOpenWhiskEndPointOhYeahBabe(params);
-                console.log("Calling endpoint:", targetOwProcessEndPoint);
+                //console.log("Calling endpoint:", targetOwProcessEndPoint);
+                console.log("Post Content size:", length);
                 request({
                     uri: targetOwProcessEndPoint,
                     method: "POST",
