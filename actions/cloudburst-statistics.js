@@ -66,13 +66,13 @@ function main(params) {
             method: "POST",
             json: true,
             body: {
+                _id: ts,
                 totalCheques: totalCheques,
                 totalRejected: totalRejected,
                 totalAccepted: totalAccepted,
                 totalAmount: totalAmount,
                 totalAmountAccepted: totalAmountAccepted,
                 totalAmountRejected: totalAmountRejected,
-                timestampms: ts,
                 calculatedFromHost: process.env.OW_API_HOST || process.env.__OW_API_HOST
             }
         }, function(error, incomingMessage, response) {
