@@ -60,6 +60,7 @@ function main(params) {
     return new Promise(function(resolve, reject) {
 
         var url = "https://" + params.CLOUDANT_REMOTE_USER + ":" + params.CLOUDANT_REMOTE_PASS + "@" + params.CLOUDANT_REMOTE_HOST + "/" + params.CLOUDANT_STATISTICS_DATABASE;
+        var ts = (new Date()).getTime();
         request({
             uri: url,
             method: "POST",
@@ -71,14 +72,14 @@ function main(params) {
                 totalAmount: totalAmount,
                 totalAmountAccepted: totalAmountAccepted,
                 totalAmountRejected: totalAmountRejected,
-                timestampms: (new Date()).getTime(),
+                timestampms: ts,
                 calculatedFromHost: process.env.OW_API_HOST || process.env.__OW_API_HOST
             }
         }, function(error, incomingMessage, response) {
             if (error) {
                 reject(error);
             } else {
-                console.log("Done!");
+                console.log("Done! Timestamp ms was ", ts);
                 resolve({ done: true });
             }
         });
