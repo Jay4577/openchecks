@@ -82,7 +82,7 @@ function main(params) {
 function pickAnOpenWhiskEndPointOhYeahBabe(params) {
     //Meny deterministic
     console.log(endpoints);
-    return postProcessEndOWEndPoint(params,endpoints[Math.round(Math.random()*endpoints.length)]);
+    return postProcessEndOWEndPoint(params,endpoints[Math.floor(Math.random()*endpoints.length)]);
 }
 
 function postProcessEndOWEndPoint(params, endpointWithPlaceHolders) {
