@@ -66,7 +66,7 @@ function main(params) {
             method: "POST",
             json: true,
             body: {
-                _id: ts,
+                _id: "" + ts,
                 totalCheques: totalCheques,
                 totalRejected: totalRejected,
                 totalAccepted: totalAccepted,
