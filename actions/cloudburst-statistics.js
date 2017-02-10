@@ -47,13 +47,13 @@ function main(params) {
         var doc = processedDocument.doc;
         if (typeof(fromAccount) !== "undefined" && fromAccount !== -1) {
             totalAccepted++;
-            totalAmountAccepted += doc.amount;
+            totalAmountAccepted += parseFloat(doc.amount);
         } else {
             totalRejected++;
-            totalAmountRejected += doc.amount;
+            totalAmountRejected += parseFloat(doc.amount);
         }
         
-        totalAmount += doc.amount;
+        totalAmount += parseFloat(doc.amount);
     });
     
     //Done with the stats :-)
@@ -78,6 +78,7 @@ function main(params) {
             if (error) {
                 reject(error);
             } else {
+                console.log("Done!");
                 resolve({ done: true });
             }
         });
