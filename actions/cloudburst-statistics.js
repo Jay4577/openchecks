@@ -71,7 +71,7 @@ function main(params) {
                 totalAccepted: totalAccepted,
                 totalAmount: totalAmount,
                 totalAmountAccepted: totalAmountAccepted,
-                totalAmountRejected: totalAmountRejected
+                totalAmountRejected: totalAmountRejected,
                 timestampms: (new Date()).getTime()
             }
         }, function(error, incomingMessage, response) {
