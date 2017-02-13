@@ -17,6 +17,7 @@ export class DashboardService {
   }
   
   getChecksStatistics():Promise<CloudantCheckStatisticsRowMapping> {
+    //no cors: regular get request won't work. Using fetch API instead, which has limited support across browsers:
     let url = this.buildRootDatabaseUrl(Databases.STATISTICS) + "_all_docs?include_docs=true&limit=1&descending=true";
     return fetch(url, { method: "GET" }).then(this.extractData).catch(this.handleError);
   }
