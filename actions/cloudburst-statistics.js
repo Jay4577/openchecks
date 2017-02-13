@@ -45,7 +45,7 @@ function main(params) {
     params.dbContent.rows.forEach(function(processedDocument) {
         var doc = processedDocument.doc;
         var amount = parseFloat(doc.amount);
-        if (amount == null || typeof(amount) == "undefined") amount = 0;
+        if (amount == null || typeof(amount) == "undefined" || isNaN(amount)) amount = 0;
         if (typeof(doc.fromAccount) !== "undefined" && doc.fromAccount != -1) {
             totalAccepted++;
             totalAmountAccepted += amount;
