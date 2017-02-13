@@ -44,15 +44,17 @@ function main(params) {
     
     params.dbContent.rows.forEach(function(processedDocument) {
         var doc = processedDocument.doc;
+        var amount = parseFloat(doc.amount);
+        if (amount == null) amount = 0;
         if (typeof(doc.fromAccount) !== "undefined" && doc.fromAccount != -1) {
             totalAccepted++;
-            totalAmountAccepted += parseFloat(doc.amount);
+            totalAmountAccepted += amount;
         } else {
             totalRejected++;
-            totalAmountRejected += parseFloat(doc.amount);
+            totalAmountRejected += amount;
         }
         
-        totalAmount += parseFloat(doc.amount);
+        totalAmount += amount;
     });
     
     //Done with the stats :-)
