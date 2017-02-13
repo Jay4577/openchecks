@@ -3,4 +3,5 @@ export class Databases {
     public static readonly AUDITED = "audited";
     public static readonly PROCESSED = "processed";
     public static readonly REJECTED = "rejected";
+    public static readonly STATISTICS = "statistics";
 }

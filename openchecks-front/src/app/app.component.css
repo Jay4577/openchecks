@@ -1,0 +1,11 @@
+:host /deep/ #piechart_amounts_div {
+    display: inline-block;
+}
+
+:host /deep/ #piechart_statuses_div {
+    display: inline-block;
+}
+
+:host /deep/ .oneliner-span {
+    display: block;
+}
