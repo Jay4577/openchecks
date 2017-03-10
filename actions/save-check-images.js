@@ -204,7 +204,7 @@ function main(params) {
           fs.readFile(rootDirectory + "/" + medFileName, function(err, data) {
             if (err) {
               console.log("Error reading medium file.");
-              return callback(null);
+              return callback(err);
             } else {
               console.log("Success reading medium file.");
               return callback(null, data);
@@ -245,7 +245,7 @@ function main(params) {
           fs.readFile(rootDirectory + "/" + smFileName, function(err, data) {
             if (err) {
               console.log("Error reading small file.");
-              return callback(null);
+              return callback(err);
             } else {
               console.log("Success reading small file.");
               return callback(null, data);
