@@ -34,10 +34,11 @@ var fs = require('fs');
  * @param   params.CLOUDANT_AUDITED_DATABASE  Cloudant database to store the original copy to
  * @param   params.CLOUDANT_PARSED_DATABASE   Cloudant database to store the parsed check data to
  * @param   params.CLOUDANT_REJECTED_DATABASE Cloudant database to store the rejected check data to
- * @param   params.CURRENT_NAMESPACE          The current namespace so we can call the OCR action by name
  * @return                                    Standard OpenWhisk success/error response
  */
 function main(params) {
+
+  var wsk = openwhisk();
 
   // Configure database connection
   console.log(params);
@@ -59,75 +60,75 @@ function main(params) {
 
   // We're only interested in changes to the database if they're inserts
   if (!params.deleted) {
-
-    async.waterfall([
-
-      // OCR magic. Takes image, reads it, returns fromAccount, routingNumber
-      function (callback) {
-        console.log('[parse-check-data.main] Executing OCR parse of check');
-        asyncCallOcrParseAction("/" + params.CURRENT_NAMESPACE + "/parse-check-with-ocr",
+    
+    return new Promise(function(resolve, reject) {  
+        async.waterfall([
+            // OCR magic. Takes image, reads it, returns fromAccount, routingNumber
+            function(callback) {
+              console.log('[parse-check-data.main] Executing OCR parse of check');
+              asyncCallOcrParseAction("/_/parse-check-with-ocr",
                 params.CLOUDANT_USER,
                 params.CLOUDANT_PASS,
                 params.CLOUDANT_AUDITED_DATABASE,
                 params._id,
                 params.attachmentName,
                 callback
+              );
+            },
+
+            // Insert data into the parsed database.
+            function(activation, callback) {
+              plainMicrCheckText = Buffer.from(activation.result.result.plaintext, 'base64').toString("ascii");
+              console.log('Plain text: ' + plainMicrCheckText);
+
+              var values = params.fileName.split('^');
+              email = values[0];
+              toAccount = values[1];
+              amount = values[2];
+              //timestamp = values[3].substring(0, values[3].length - 4); // Remove file extension
+              timestamp = parseInt((new Date).getTime() / 1000, 10);
+
+              var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
+              if (bankingInfo.invalid()) {
+                console.log('Inserting in REJECTEDDB, id ' + params._id + ", amount = " + amount);
+                rejectedDb.insert({
+                    _id: params._id,
+                    toAccount: toAccount,
+                    fromAccount: -1,
+                    routingNumber: -1,
+                    email: email,
+                    amount: amount,
+                    timestamp: timestamp
+                  },
+                  function(err, body, head) {
+                    if (err) {
+                      console.log('[parse-check-data.main] error: rejectedDb');
+                      console.log(err);
+                      return callback(err);
+                    } else {
+                      console.log('[parse-check-data.main] success: rejectedDb');
+                      console.log(body);
+                      return callback(null);
+                    }
+                  }
                 );
-      },
-
-      // Insert data into the parsed database.
-      function (activation, callback) {
-        plainMicrCheckText = Buffer.from(activation.result.result.plaintext, 'base64').toString("ascii");
-        console.log('Plain text: ' + plainMicrCheckText);
-
-        var values = params.fileName.split('^');
-        email = values[0];
-        toAccount = values[1];
-        amount = values[2];
-        //timestamp = values[3].substring(0, values[3].length - 4); // Remove file extension
-        timestamp = parseInt((new Date).getTime() / 1000, 10);
-
-        var bankingInfo = parseMicrDataToBankingInformation(plainMicrCheckText);
-        if (bankingInfo.invalid()) {
-          console.log('Inserting in REJECTEDDB, id ' + params._id + ", amount = " + amount);
-          rejectedDb.insert({
-            _id: params._id,
-            toAccount: toAccount,
-            fromAccount: -1,
-            routingNumber: -1,
-            email: email,
-            amount: amount,
-            timestamp: timestamp
-          },
-            function (err, body, head) {
-              if (err) {
-                console.log('[parse-check-data.main] error: rejectedDb');
-                console.log(err);
-                return callback(err);
               } else {
-                console.log('[parse-check-data.main] success: rejectedDb');
-                console.log(body);
-                return callback(null);
-              }
-            }
-          );
-        } else {
-          fromAccount = bankingInfo.accountNumber;
-          routingNumber = bankingInfo.routingNumber;
-          //fromAccount = activation.result.result.account;
-          //routingNumber = activation.result.result.routing;
+                fromAccount = bankingInfo.accountNumber;
+                routingNumber = bankingInfo.routingNumber;
+                //fromAccount = activation.result.result.account;
+                //routingNumber = activation.result.result.routing;
 
-          console.log('Inserting in PARSEDDB, id ' + params._id + ", amount = " + amount);
-          parsedDb.insert({
-            _id: params._id,
-            toAccount: toAccount,
-            fromAccount: fromAccount,
-            routingNumber: routingNumber,
-            email: email,
-            amount: amount,
-            timestamp: timestamp
-          },
-                  function (err, body, head) {
+                console.log('Inserting in PARSEDDB, id ' + params._id + ", amount = " + amount);
+                parsedDb.insert({
+                    _id: params._id,
+                    toAccount: toAccount,
+                    fromAccount: fromAccount,
+                    routingNumber: routingNumber,
+                    email: email,
+                    amount: amount,
+                    timestamp: timestamp
+                  },
+                  function(err, body, head) {
                     if (err) {
                       console.log('[parse-check-data.main] error: parsedDb');
                       console.log(err);
@@ -138,23 +139,27 @@ function main(params) {
                       return callback(null);
                     }
                   }
-          );
-        }
-      },
-    ],
-            function (err, result) {
-              if (err) {
-                console.log("[KO]", err);
-              } else {
-                console.log("[OK]");
+                );
               }
-              whisk.done(null, err);
+            },
+          ],
+          function(err, result) {
+            if (err) {
+              console.log("Error", err);
+              reject(err);
+            } else {
+              resolve({
+                status: "Success"
+              });
             }
-    );
+          }
+        );
+    });
 
+  } else {
+      return Promise.resolve({status: "Success"});
   }
 
-  return whisk.async();
 }
 
 /**
@@ -168,27 +173,31 @@ function main(params) {
  * @return                The reference to a configured object storage instance
  */
 function asyncCallOcrParseAction(actionName, cloudantUser, cloudantPass, database, id, attachmentName, callback) {
-  console.log("Calling", actionName, "for", id);
-  whisk.invoke({
-    name: actionName,
-    parameters: {
-      CLOUDANT_USER: cloudantUser,
-      CLOUDANT_PASS: cloudantPass,
-      CLOUDANT_AUDITED_DATABASE: database,
-      IMAGE_ID: id,
-      ATTACHMENT_NAME: attachmentName
-    },
-    blocking: true,
-    next: function (err, activation) {
-      if (err) {
-        console.log(actionName, "[error]", error);
-        return callback(err);
-      } else {
-        console.log(actionName, "[activation]", activation);
-        return callback(null, activation);
+    console.log("Calling", actionName, "for", id);
+
+    var wsk = openwhisk();
+
+    wsk.actions.invoke({
+      "actionName": actionName,
+      "params": {
+        CLOUDANT_USER: cloudantUser,
+        CLOUDANT_PASS: cloudantPass,
+        CLOUDANT_AUDITED_DATABASE: database,
+        IMAGE_ID: id,
+        ATTACHMENT_NAME: attachmentName
       }
-    }
-  });
+    }).then(
+      function(activation) {
+        console.log(actionName, "[activation]", activation);
+        callback(null, activation);
+      }
+    ).catch(
+      function(error) {
+        console.log(actionName, "[error]", error);
+        callback(error);
+      }
+    );
+
 }
 
 /**
@@ -199,7 +208,7 @@ function asyncCallOcrParseAction(actionName, cloudantUser, cloudantPass, databas
 function BankCheckMicrInformation(routingNumber, accountNumber) {
   this.routingNumber = routingNumber;
   this.accountNumber = accountNumber;
-  this.invalid = function () {
+  this.invalid = function() {
     return this.routingNumber.length != 9 || this.accountNumber.length === 2;
   }
 }

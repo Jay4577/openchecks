@@ -36,6 +36,8 @@ var async = require('async');
  */
 function main(params) {
 
+  var wsk = openwhisk();
+
   // Configure database connection
   console.log(params);
   var cloudant = new Cloudant({
@@ -45,84 +47,90 @@ function main(params) {
   var processedDb = cloudant.db.use(params.CLOUDANT_PROCESSED_DATABASE);
 
   if (!params.deleted) {
+    return new Promise(function(resolve, reject) {  
+        var processed = {};
+        processed._id = params._id;
+        processed.toAccount = params.toAccount;
+        processed.fromAccount = params.fromAccount;
+        processed.routingNumber = params.routingNumber;
+        processed.email = params.email;
+        processed.amount = params.amount;
+        processed.timestamp = params.timestamp;
 
-    var processed = {};
-    processed._id = params._id;
-    processed.toAccount = params.toAccount;
-    processed.fromAccount = params.fromAccount;
-    processed.routingNumber = params.routingNumber;
-    processed.email = params.email;
-    processed.amount = params.amount;
-    processed.timestamp = params.timestamp;
+        async.waterfall([
 
-    async.waterfall([
-
-        // Insert the check data into the processed database.
-        function(callback) {
-          console.log('[record-check-deposit.main] Updating the processed database');
-          processedDb.insert(processed, function(err, body, head) {
-            if (err) {
-              console.log('[record-check-deposit.main] error: processedDb');
-              console.log(err);
-              return callback(err);
-            } else {
-              console.log('[record-check-deposit.main] success: processedDb');
-              console.log(body);
-              return callback(null, processed);
-            }
-          });
-        },
-
-        // Send email notification, simulating connectivity to backend system and notifying customer.
-        function(processed, callback) {
-          console.log('[record-check-deposit.main] Sending notification email');
-
-          subject = 'Check deposit accepted';
-          content = 'Hello, ';
-          content += 'your deposit for $' + processed.amount + ' was accepted into your account ' + processed.toAccount + ' on ' + format(processed.timestamp) + '. ';
-          content += 'For reference, the check number and routing number were: ' + processed.fromAccount + '-' + processed.routingNumber + '. ';
-
-          console.log("Mailing: " + '{"personalizations": [{"to": [{"email": "' + processed.email + '"}]}],"from": {"email": "check.deposit@catabase.org"},"subject": "' + subject + '","content": [{"type": "text/plain", "value": "' + content + '"}]}');
-
-          request({
-            url: 'https://api.sendgrid.com/v3/mail/send',
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + params.SENDGRID_API_KEY
+            // Insert the check data into the processed database.
+            function(callback) {
+              console.log('[record-check-deposit.main] Updating the processed database');
+              processedDb.insert(processed, function(err, body, head) {
+                if (err) {
+                  console.log('[record-check-deposit.main] error: processedDb');
+                  console.log(err);
+                  return callback(err);
+                } else {
+                  console.log('[record-check-deposit.main] success: processedDb');
+                  console.log(body);
+                  return callback(null, processed);
+                }
+              });
             },
-            body: '{"personalizations": [{"to": [{"email": "' + processed.email + '"}]}],"from": {"email": "' + params.SENDGRID_FROM_ADDRESS + '"},"subject": "' + subject + '","content": [{"type": "text/plain", "value": "' + content + '"}]}'
-          }, function(err, response, body) {
-            if (err) {
-              console.log('[record-check-deposit.main] error: ');
-              console.log(err);
-              callback(err);
-              return;
-            } else {
-              console.log('[record-check-deposit.main] success: ');
-              console.log(body);
-              callback(null);
-              return;
+
+            // Send email notification, simulating connectivity to backend system and notifying customer.
+            function(processed, callback) {
+              console.log('[record-check-deposit.main] Sending notification email');
+
+              subject = 'Check deposit accepted';
+              content = 'Hello, ';
+              content += 'your deposit for $' + processed.amount + ' was accepted into your account ' + processed.toAccount + ' on ' + format(processed.timestamp) + '. ';
+              content += 'For reference, the check number and routing number were: ' + processed.fromAccount + '-' + processed.routingNumber + '. ';
+
+              console.log("Mailing: " + '{"personalizations": [{"to": [{"email": "' + processed.email + '"}]}],"from": {"email": "check.deposit@catabase.org"},"subject": "' + subject + '","content": [{"type": "text/plain", "value": "' + content + '"}]}');
+
+              request({
+                url: 'https://api.sendgrid.com/v3/mail/send',
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + params.SENDGRID_API_KEY
+                },
+                body: '{"personalizations": [{"to": [{"email": "' + processed.email + '"}]}],"from": {"email": "' + params.SENDGRID_FROM_ADDRESS + '"},"subject": "' + subject + '","content": [{"type": "text/plain", "value": "' + content + '"}]}'
+              }, function(err, response, body) {
+                if (err) {
+                  console.log('[record-check-deposit.main] error: ');
+                  console.log(err);
+                  callback(err);
+                  return;
+                } else {
+                  console.log('[record-check-deposit.main] success: ');
+                  console.log(body);
+                  callback(null);
+                  return;
+                }
+              });
+
             }
+
+          ],
+
+          function(err, result) {
+            if (err) {
+              console.log("Error", err);
+              reject(err);
+            } else {
+              resolve({
+                status: "Success"
+              });
+            }
+          }
+        );
+    });
+
+  } else {
+      return Promise.resolve({
+            status: "Success"
           });
-
-        }
-
-      ],
-
-      function(err, result) {
-        if (err) {
-          console.log("[KO]", err);
-        } else {
-          console.log("[OK]");
-        }
-        whisk.done(null, err);
-      }
-    );
-
   }
 
-  return whisk.async();
 }
 
 /**

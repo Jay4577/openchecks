@@ -30,54 +30,67 @@ var path = require('path');
  * @param   params.CLOUDANT_USER      Cloudant username (set once at action update time)
  * @param   params.CLOUDANT_PASS      Cloudant password (set once at action update time)
  * @param   params.SENDGRID_API_KEY   Cloudant password (set once at action update time)
- * @param   params.CURRENT_NAMESPACE  The current namespace so we can call the save action by name
  * @return                            Standard OpenWhisk success/error response
  */
 function main(params) {
   console.log("Retrieving file list");
 
+  var wsk = openwhisk();
 
   // Configure object storage connection
   var os = new ObjectStorage(
-          params.SWIFT_REGION_NAME,
-          params.SWIFT_PROJECT_ID,
-          params.SWIFT_USER_ID,
-          params.SWIFT_PASSWORD
-          );
+    params.SWIFT_REGION_NAME,
+    params.SWIFT_PROJECT_ID,
+    params.SWIFT_USER_ID,
+    params.SWIFT_PASSWORD
+  );
 
-  os.authenticate(function (err, response, body) {
-    if (err) {
-      console.log("Authentication failure", err);
-      whisk.done(null, err);
-    } else {
-      os.listFiles(params.SWIFT_INCOMING_CONTAINER_NAME, function (err, response, files) {
-        console.log(files);
-        console.log("Found", files.length, "files");
-        var tasks = files.map(function (file) {
-          return function (callback) {
-            var filePathPieces = file.name.split(path.sep);
-            if (filePathPieces.length !== 2) {
-              return callback(null);
+  return new Promise(function(resolve, reject) {
+    os.authenticate(function(err, response, body) {
+      if (err) {
+        console.log("Authentication failure", err);
+        reject(null, err);
+      } else {
+        os.listFiles(params.SWIFT_INCOMING_CONTAINER_NAME, function(err, response, files) {
+          console.log(files);
+          console.log("Found", files.length, "files");
+
+          var tasks = files.map(function(file) {
+            return function(callback) {
+              var filePathPieces = file.name.split(path.sep);
+              if (filePathPieces.length !== 2) {
+                return callback(null);
+              } else {
+                asyncCallSaveCheckImagesAction(
+                  "/_/save-check-images",
+                  filePathPieces[0],
+                  filePathPieces[1],
+                  file.content_type,
+                  file.last_modified,
+                  callback
+                );
+              }
+            };
+          });
+
+          async.waterfall(tasks, function(err, result) {
+            if (err) {
+              console.log("Error", err);
+              reject(err);
             } else {
-              asyncCallSaveCheckImagesAction(
-                      "/" + params.CURRENT_NAMESPACE + "/save-check-images",
-                      filePathPieces[0],
-                      filePathPieces[1],
-                      file.content_type,
-                      file.last_modified,
-                      callback
-                      );
+              resolve({
+                status: "Success"
+              });
             }
-          };
+          });
+
         });
-        async.waterfall(tasks, function (err, result) {
-          whisk.done(undefined, err);
-        });
-      });
-    }
+
+      }
+
+    });
   });
 
-  return whisk.async();
 }
 
 /**
@@ -93,24 +106,29 @@ function main(params) {
  */
 function asyncCallSaveCheckImagesAction(actionName, branchFolder, fileName, contentType, lastModified, callback) {
   console.log("Calling", actionName, "for", fileName);
-  whisk.invoke({
-    name: actionName,
-    parameters: {
-      branchFolder: branchFolder,
-      fileName: fileName,
-      contentType: contentType,
-      lastModified: lastModified
-    },
-    blocking: false,
-    next: function (error, activation) {
-      if (error) {
-        console.log(actionName, "[error]", error);
-      } else {
-        console.log(actionName, "[activation]", activation);
+
+  var wsk = openwhisk();
+
+  wsk.actions.invoke({
+      "actionName": actionName,
+      "params": {
+        branchFolder: branchFolder,
+        fileName: fileName,
+        contentType: contentType,
+        lastModified: lastModified
       }
-      callback(error);
-    }
-  });
+    }).then(
+      function(activation) {
+        console.log(actionName, "[activation]", activation);
+        callback(null);
+      }
+    ).catch(
+      function(error) {
+        console.log(actionName, "[error]", error);
+        callback(error);
+      }
+  );
+
 }
 
 /**
@@ -133,7 +151,7 @@ function ObjectStorage(region, projectId, userId, password) {
     throw new Error("Invalid Region");
   }
 
-  self.authenticate = function (callback) {
+  self.authenticate = function(callback) {
     request({
       uri: "https://identity.open.softlayer.com/v3/auth/tokens",
       method: 'POST',
@@ -157,7 +175,7 @@ function ObjectStorage(region, projectId, userId, password) {
           }
         }
       }
-    }, function (err, response, body) {
+    }, function(err, response, body) {
       if (!err) {
         self.token = response.headers["x-subject-token"];
       }
@@ -165,7 +183,7 @@ function ObjectStorage(region, projectId, userId, password) {
     });
   };
 
-  self.listFiles = function (container, callback) {
+  self.listFiles = function(container, callback) {
     request({
       uri: self.baseUrl + container,
       method: 'GET',
