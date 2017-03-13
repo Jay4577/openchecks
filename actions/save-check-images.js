@@ -48,6 +48,7 @@ function main(params) {
 
   var wsk = openwhisk();
 
+
   // Configure database connection
   var cloudant = new Cloudant({
     account: params.CLOUDANT_USER,
@@ -70,12 +71,17 @@ function main(params) {
   var imageRootFolder = "checks-images";
   var imageContainerFolder = imageRootFolder + "/" + params.SWIFT_INCOMING_CONTAINER_NAME;
   var imageBranchFolder = imageContainerFolder + "/" + params.branchFolder;
-  if (!fs.existsSync(imageRootFolder))
-    fs.mkdirSync(imageRootFolder, 600);
-  if (!fs.existsSync(imageContainerFolder))
-    fs.mkdirSync(imageContainerFolder, 600);
-  if (!fs.existsSync(imageBranchFolder))
-    fs.mkdirSync(imageBranchFolder, 600);
+  
+  try { 
+  fs.rmdirSync(imageBranchFolder);
+  fs.rmdirSync(imageContainerFolder);
+  fs.rmdirSync(imageRootFolder);
+  } catch(e)  {}
+  
+  if (!fs.existsSync(imageRootFolder)) fs.mkdirSync(imageRootFolder, 770);
+  if (!fs.existsSync(imageContainerFolder)) fs.mkdirSync(imageContainerFolder, 770);
+  if (!fs.existsSync(imageBranchFolder)) fs.mkdirSync(imageBranchFolder, 770);
+  
   var imageFolder = imageBranchFolder;
 
   var rootDirectory;
@@ -96,7 +102,9 @@ function main(params) {
         // Get the file on disk as a temp file
         function(callback) {
           console.log("Downloading", params.fileName);
-          os.downloadFile(params.SWIFT_INCOMING_CONTAINER_NAME, params.branchFolder + ":" + params.fileName, fs.createWriteStream(rootDirectory + "/" + params.fileName), function(err) {
+          if (!fs.existsSync(rootDirectory)) console.log("WARNING: DESTINATION DIR DOES NOT EXIST");
+          os.downloadFile(params.SWIFT_INCOMING_CONTAINER_NAME, params.branchFolder + "/" + params.fileName, fs.createWriteStream(rootDirectory + "/" + params.fileName), function(err) {
+            if (!fs.existsSync(rootDirectory + "/" + params.fileName)) console.log("WARNING: FILE DOES NOT EXIST - DOWNLOAD DID NOT WORK");
             return callback(err);
           });
         },
@@ -121,10 +129,11 @@ function main(params) {
           console.log("Creating resized images.");
           if (params.fileName.toLowerCase().endsWith(".bmp") || params.fileName.toLowerCase().endsWith(".jpg") || params.fileName.toLowerCase().endsWith(".png")) {
             console.log("Resizing image to 300px wide - storing it in " + rootDirectory);
+            
             gm(rootDirectory + "/" + params.fileName).resize(300).write(rootDirectory + "/" + medFileName, function(err) {
               if (err) {
                 console.log("[KO - RESIZE 300]", err);
-                return callback(null);
+                return callback(err);
               } else {
                 console.log("Resizing image to 150px wide - storing it in " + rootDirectory);
                 gm(rootDirectory + "/" + params.fileName).resize(150).write(rootDirectory + "/" + smFileName, function(err) {

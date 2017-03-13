@@ -78,6 +78,7 @@ function main(params) {
 
             // Insert data into the parsed database.
             function(activation, callback) {
+                
               plainMicrCheckText = Buffer.from(activation.result.result.plaintext, 'base64').toString("ascii");
               console.log('Plain text: ' + plainMicrCheckText);
 
@@ -118,7 +119,7 @@ function main(params) {
                 //fromAccount = activation.result.result.account;
                 //routingNumber = activation.result.result.routing;
 
-                console.log('Inserting in PARSEDDB, id ' + params._id + ", amount = " + amount);
+                console.log('Inserting in PARSEDDB, id ' + params._id + ", amount = " + amount);             
                 parsedDb.insert({
                     _id: params._id,
                     toAccount: toAccount,
@@ -185,11 +186,12 @@ function asyncCallOcrParseAction(actionName, cloudantUser, cloudantPass, databas
         CLOUDANT_AUDITED_DATABASE: database,
         IMAGE_ID: id,
         ATTACHMENT_NAME: attachmentName
-      }
+      },
+      blocking: true
     }).then(
       function(activation) {
         console.log(actionName, "[activation]", activation);
-        callback(null, activation);
+        callback(null, activation.response);
       }
     ).catch(
       function(error) {
