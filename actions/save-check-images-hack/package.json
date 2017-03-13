@@ -1,0 +1,14 @@
+{
+  "name": "save-check-images-hack",
+  "version": "1.0.0",
+  "main": "save-check-images-hack.js",
+  "dependencies" : {
+      "openwhisk": "3.3.5",
+      "request": "2.81.0",
+      "async": "2.1.5",
+      "fs": "0.0.1-security",
+      "node-uuid": "1.4.7",
+      "gm": "1.23.0",
+      "cloudant": "1.7.1"
+  }
+}
