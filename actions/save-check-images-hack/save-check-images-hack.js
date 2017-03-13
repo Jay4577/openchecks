@@ -317,6 +317,8 @@ function main(params) {
   });
 }
 
+exports.main = main;
+
 /**
  * This is an adapter class for OpenStack Swift based object storage.
  *
