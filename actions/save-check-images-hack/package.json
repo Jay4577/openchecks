@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "main": "save-check-images-hack.js",
   "dependencies" : {
-      "openwhisk": "3.3.5",
-      "request": "2.81.0",
-      "async": "2.1.5",
-      "fs": "0.0.1-security",
+      "openwhisk": "3.3.2",
+      "request": "2.79.0",
+      "async": "2.1.4",
       "node-uuid": "1.4.7",
       "gm": "1.23.0",
-      "cloudant": "1.7.1"
+      "cloudant": "1.6.2"
   }
 }
